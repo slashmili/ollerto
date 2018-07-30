@@ -1,6 +1,11 @@
 module Main exposing (..)
 
+import Json.Decode as Decode exposing (Value)
+import Navigation exposing (Location)
 import Html exposing (Html, div, text, program)
+
+import Ports
+
 
 
 -- MODEL
@@ -10,8 +15,12 @@ type alias Model =
     String
 
 
-init : ( Model, Cmd Msg )
-init =
+init : Value -> Location -> ( Model, Cmd Msg )
+init value location=
+    let
+        _ = Debug.log "value" value
+        _ = Debug.log "location" location
+    in
     ( "Hello 2!", Cmd.none )
 
 
@@ -56,10 +65,13 @@ subscriptions model =
 
 -- MAIN
 
+fromLocation: Location -> Msg
+fromLocation location =
+    NoOp
 
-main : Program Never Model Msg
+main : Program Value Model Msg
 main =
-    program
+    Navigation.programWithFlags fromLocation
         { init = init
         , view = view
         , update = update
