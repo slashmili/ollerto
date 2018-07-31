@@ -9,8 +9,23 @@ defmodule OllertoWeb.ErrorHelpers do
   Generates tag for inlined form input errors.
   """
   def error_tag(form, field) do
-    Enum.map(Keyword.get_values(form.errors, field), fn (error) ->
-      content_tag :span, translate_error(error), class: "help-block"
+    Enum.map(Keyword.get_values(form.errors, field), fn error ->
+      content_tag(:span, translate_error(error), class: "help-block")
+    end)
+  end
+
+  @doc """
+  Returns list of errors from `%Ecto.Changeset{}`
+  """
+  def error_details(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.traverse_errors(&format_error/1)
+    |> Enum.map(fn {k, v} -> %{key: k, message: v} end)
+  end
+
+  defp format_error({msg, opts}) do
+    Enum.reduce(opts, msg, fn {key, value}, acc ->
+      String.replace(acc, "%{#{key}}", to_string(value))
     end)
   end
 
