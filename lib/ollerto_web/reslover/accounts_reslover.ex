@@ -8,7 +8,8 @@ defmodule OllertoWeb.AccountsReslover do
   end
 
   def authenticate_user(_, %{input: params}, _) do
-    with {:ok, user} <- Accounts.authenticate(params[:email], params[:password]) do
+    with true <- String.length(params[:email]) > 0 && String.length(params[:password]),
+         {:ok, user} <- Accounts.authenticate(params[:email], params[:password]) do
       token = sign(%{id: user.id})
       {:ok, %{token: token, user: user}}
     else

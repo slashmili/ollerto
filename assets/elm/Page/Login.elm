@@ -11,16 +11,16 @@ import Task exposing (Task)
 
 type alias Model =
     { errors : List String
-    , email : String
-    , password : String
+    , email : Maybe String
+    , password : Maybe String
     }
 
 
 initialModel : Model
 initialModel =
     { errors = []
-    , email = ""
-    , password = ""
+    , email = Nothing
+    , password = Nothing
     }
 
 
@@ -48,19 +48,24 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SetEmail email ->
-            ( { model | email = email }, Cmd.none )
+            ( { model | email = Just email }, Cmd.none )
 
         SetPassword password ->
-            ( { model | password = password }, Cmd.none )
+            ( { model | password = Just password }, Cmd.none )
 
         SubmitForm ->
-            let
-                cmd =
-                    model
-                        |> Request.User.login
-                        |> Task.attempt ReceiveQueryResponse
-            in
-                ( model, cmd )
+            case ( model.email, model.password ) of
+                ( Just email, Just password ) ->
+                    let
+                        cmd =
+                            {email = email, password = password}
+                                |> Request.User.login
+                                |> Task.attempt ReceiveQueryResponse
+                    in
+                        ( model, cmd )
+
+                _ ->
+                    ( { model | errors = [ "email and password are mandatory" ] }, Cmd.none )
 
         ReceiveQueryResponse (Ok authenticatedUser) ->
             let
