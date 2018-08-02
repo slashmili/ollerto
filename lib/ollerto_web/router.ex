@@ -23,7 +23,7 @@ defmodule OllertoWeb.Router do
   scope "/api" do
     pipe_through :api
 
-    forward "/graphql", Absinthe.Plug.GraphiQL,
+    forward "/v1/graphql", Absinthe.Plug.GraphiQL,
       schema: OllertoWeb.Schema,
       interface: :simple,
       socket: OllertoWeb.UserSocket
