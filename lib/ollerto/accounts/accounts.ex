@@ -101,4 +101,14 @@ defmodule Ollerto.Accounts do
   def change_user(%User{} = user) do
     User.changeset(user, %{})
   end
+
+  @spec authenticate(String.t(), String.t()) :: {:ok, %User{}} | :error
+  def authenticate(email, password) do
+    with user <- Repo.get_by(User, %{email: String.downcase(email)}),
+         true <- User.valid_password?(user, password) do
+      {:ok, user}
+    else
+      _ -> :error
+    end
+  end
 end

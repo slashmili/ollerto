@@ -17,9 +17,14 @@ defmodule OllertoWeb.Schema do
   end
 
   mutation do
-    field :user_register, :user_register_result do
-      arg :input, non_null(:user_register_input)
+    field :register_user, :register_user_result do
+      arg :input, non_null(:register_user_input)
       resolve &AccountsReslover.register_user/3
+    end
+
+    field :authenticate_user, :authenticate_user_result do
+      arg :input, non_null(:authenticate_user_input)
+      resolve &AccountsReslover.authenticate_user/3
     end
   end
 

@@ -37,4 +37,9 @@ defmodule Ollerto.Accounts.User do
         changeset
     end
   end
+
+  @spec valid_password?(%__MODULE__{}, String.t()) :: boolean
+  def valid_password?(%__MODULE__{password_hash: digest}, password) do
+    Comeonin.Pbkdf2.checkpw(password, digest)
+  end
 end
