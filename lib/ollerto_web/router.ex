@@ -20,14 +20,12 @@ defmodule OllertoWeb.Router do
     get "/", PageController, :index
   end
 
-  # Other scopes may use custom stacks.
-  Absinthe.Plug.GraphiQL
-
   scope "/api" do
     pipe_through :api
 
     forward "/graphql", Absinthe.Plug.GraphiQL,
       schema: OllertoWeb.Schema,
-      interface: :simple
+      interface: :simple,
+      socket: OllertoWeb.UserSocket
   end
 end

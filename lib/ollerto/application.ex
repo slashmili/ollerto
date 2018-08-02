@@ -12,6 +12,7 @@ defmodule Ollerto.Application do
       supervisor(Ollerto.Repo, []),
       # Start the endpoint when the application starts
       supervisor(OllertoWeb.Endpoint, []),
+      supervisor(Absinthe.Subscription, [OllertoWeb.Endpoint])
       # Start your own worker by calling: Ollerto.Worker.start_link(arg1, arg2, arg3)
       # worker(Ollerto.Worker, [arg1, arg2, arg3]),
     ]

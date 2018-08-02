@@ -30,4 +30,16 @@ defmodule OllertoWeb.Schema do
       end
     end
   end
+
+  subscription do
+    field :new_order, :user do
+      arg :id, non_null(:id)
+
+      config(fn args, sc ->
+        IO.inspect(args)
+        IO.inspect(sc)
+        {:ok, topic: args.id}
+      end)
+    end
+  end
 end
