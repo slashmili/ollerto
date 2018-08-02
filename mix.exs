@@ -10,6 +10,7 @@ defmodule Ollerto.Mixfile do
       compilers: [:phoenix, :gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
+      dialyzer: [plt_add_deps: :transitive],
       deps: deps()
     ]
   end
@@ -45,7 +46,10 @@ defmodule Ollerto.Mixfile do
       {:absinthe_plug, "~> 1.4"},
       {:absinthe_phoenix, "~> 1.4"},
       {:comeonin, "~> 4.0"},
-      {:pbkdf2_elixir, "~> 0.12.3"}
+      {:pbkdf2_elixir, "~> 0.12.3"},
+
+      # TOOLS
+      {:dialyxir, "~> 1.0.0-rc.3", only: [:dev], runtime: false}
     ]
   end
 
