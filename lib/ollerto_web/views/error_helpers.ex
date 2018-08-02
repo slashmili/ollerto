@@ -15,21 +15,6 @@ defmodule OllertoWeb.ErrorHelpers do
   end
 
   @doc """
-  Returns list of errors from `%Ecto.Changeset{}`
-  """
-  def error_details(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> Ecto.Changeset.traverse_errors(&format_error/1)
-    |> Enum.map(fn {k, v} -> %{key: k, message: v} end)
-  end
-
-  defp format_error({msg, opts}) do
-    Enum.reduce(opts, msg, fn {key, value}, acc ->
-      String.replace(acc, "%{#{key}}", to_string(value))
-    end)
-  end
-
-  @doc """
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do

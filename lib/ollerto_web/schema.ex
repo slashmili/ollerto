@@ -1,8 +1,15 @@
 defmodule OllertoWeb.Schema do
   use Absinthe.Schema
   alias OllertoWeb.AccountsReslover
+  alias OllertoWeb.Schema.ChangesetErrorsMiddleware
 
   import_types __MODULE__.AccountTypes
+
+  def middleware(middleware, _field, %{identifier: :mutation}) do
+    middleware ++ [ChangesetErrorsMiddleware]
+  end
+
+  def middleware(middleware, _, _), do: middleware
 
   object :input_error do
     field :key, non_null(:string)
