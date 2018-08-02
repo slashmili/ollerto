@@ -37,15 +37,11 @@ view session model =
         ]
 
 
-type alias AuthenticateUserResponse =
-    Result GraphQLClient.Error Request.User.AuthenticateUser
-
-
 type Msg
     = SubmitForm
     | SetEmail String
     | SetPassword String
-    | ReceiveQueryResponse AuthenticateUserResponse
+    | ReceiveQueryResponse Request.User.AuthenticateUserResponse
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

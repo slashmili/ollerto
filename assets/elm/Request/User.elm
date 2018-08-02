@@ -1,4 +1,4 @@
-module Request.User exposing (login, AuthenticateUser)
+module Request.User exposing (login, AuthenticateUser, AuthenticateUserResponse)
 
 import Request.Helper as Helper
 import GraphQL.Request.Builder exposing (..)
@@ -16,6 +16,9 @@ type alias AuthenticateUser =
     { user : User
     , token : String
     }
+
+type alias AuthenticateUserResponse =
+    Result GraphQLClient.Error AuthenticateUser
 
 
 login : { r | email : String, password : String } -> Task GraphQLClient.Error AuthenticateUser
