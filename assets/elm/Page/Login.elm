@@ -5,9 +5,11 @@ module Page.Login exposing (Msg, Model, initialModel, view, update)
 import Data.Session exposing (Session)
 import Data.User as User exposing (User)
 
+
 -- Request
 
 import Request.User
+
 
 -- Helpers
 
@@ -84,12 +86,13 @@ update msg model =
 
         ReceiveQueryResponse (Ok { user, token }) ->
             let
-                userData = User.build user.id user.email token
+                userData =
+                    User.build user.id user.email token
             in
-            Util.triple
-                model
-                (Cmd.batch [User.storeSession userData, Route.modifyUrl Route.Home])
-                (Just userData)
+                Util.triple
+                    model
+                    (Cmd.batch [ User.storeSession userData, Route.modifyUrl Route.Home ])
+                    (Just userData)
 
         ReceiveQueryResponse (Err (GraphQLError grErros)) ->
             let
