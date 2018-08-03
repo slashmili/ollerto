@@ -104,7 +104,7 @@ defmodule Ollerto.Accounts do
 
   @spec authenticate(String.t(), String.t()) :: {:ok, %User{}} | :error
   def authenticate(email, password) do
-    with user <- Repo.get_by(User, %{email: String.downcase(email)}),
+    with user when not is_nil(user) <- Repo.get_by(User, %{email: String.downcase(email)}),
          true <- User.valid_password?(user, password) do
       {:ok, user}
     else
