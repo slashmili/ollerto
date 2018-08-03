@@ -33,24 +33,23 @@ type alias Model =
 
 init : Value -> Location -> ( Model, Cmd Msg )
 init value location =
-        setRoute (Route.fromLocation location)
-            { pageState = Loaded Blank
-            , session = { user = Nothing }
-            }
+    setRoute (Route.fromLocation location)
+        { pageState = Loaded Blank
+        , session = { user = Nothing }
+        }
 
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
 setRoute maybeRoute model =
     case maybeRoute of
-        Just Route.Root ->
-            (model, Route.modifyUrl Route.Home)
+        Just (Route.Root) ->
+            ( model, Route.modifyUrl Route.Home )
 
         Just (Route.Home) ->
             ( { model | pageState = Loaded (Home Home.initialModel) }, Cmd.none )
 
         Just (Route.Login) ->
             ( { model | pageState = Loaded (Login Login.initialModel) }, Cmd.none )
-
 
         _ ->
             ( model, Cmd.none )
@@ -87,12 +86,13 @@ viewPage session page =
         Login subModel ->
             Login.view session subModel
                 |> Html.map LoginMsg
+
         Home subModel ->
             Home.view session subModel
-            |> Html.map HomeMsg
+                |> Html.map HomeMsg
+
         _ ->
             text ("Page " ++ (toString page) ++ " ...")
-
 
 
 
@@ -114,10 +114,18 @@ updatePage page msg model =
 
         ( LoginMsg subMsg, Login subModel ) ->
             let
-                ( pageModel, cmd ) =
+                ( pageModel, cmd, maybeUser ) =
                     Login.update subMsg subModel
+
+                newModule =
+                    case maybeUser of
+                        Just user ->
+                            { model | session = { user = maybeUser } }
+
+                        Nothing ->
+                            model
             in
-                ( { model | pageState = Loaded (Login pageModel) }
+                ( { newModule | pageState = Loaded (Login pageModel) }
                 , Cmd.map LoginMsg cmd
                 )
 

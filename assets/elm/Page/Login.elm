@@ -1,7 +1,19 @@
 module Page.Login exposing (Msg, Model, initialModel, view, update)
 
+-- Data
+
 import Data.Session exposing (Session)
+import Data.User as User exposing (User)
+import Util
+
+
+-- Request
+
 import Request.User
+
+
+-- External
+
 import Html.Events exposing (onClick, onSubmit, onInput)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -44,42 +56,37 @@ type Msg
     | ReceiveQueryResponse Request.User.AuthenticateUserResponse
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, Maybe User )
 update msg model =
     case msg of
         SetEmail email ->
-            ( { model | email = Just email }, Cmd.none )
+            Util.triple { model | email = Just email } Cmd.none Nothing
 
         SetPassword password ->
-            ( { model | password = Just password }, Cmd.none )
+            Util.triple { model | password = Just password } Cmd.none Nothing
 
         SubmitForm ->
             case ( model.email, model.password ) of
                 ( Just email, Just password ) ->
                     let
                         cmd =
-                            {email = email, password = password}
+                            { email = email, password = password }
                                 |> Request.User.login
                                 |> Task.attempt ReceiveQueryResponse
                     in
-                        ( model, cmd )
-
+                        Util.triple model cmd Nothing
                 _ ->
-                    ( { model | errors = [ "email and password are mandatory" ] }, Cmd.none )
+                    Util.triple { model | errors = [ "email and password are mandatory" ] } Cmd.none Nothing
 
-        ReceiveQueryResponse (Ok authenticatedUser) ->
-            let
-                _ =
-                    Debug.log "msg" authenticatedUser
-            in
-                ( model, Cmd.none )
+        ReceiveQueryResponse (Ok {user, token}) ->
+            Util.triple model Cmd.none (Just (User.build user.id user.email token))
 
         ReceiveQueryResponse (Err (GraphQLError grErros)) ->
             let
                 errors =
                     List.map .message grErros
             in
-                ( { model | errors = errors }, Cmd.none )
+                Util.triple { model | errors = errors } Cmd.none Nothing
 
         ReceiveQueryResponse (Result.Err (HttpError _)) ->
-            ( { model | errors = [ "Internal error!" ] }, Cmd.none )
+            Util.triple { model | errors = [ "Internal error!" ] } Cmd.none Nothing

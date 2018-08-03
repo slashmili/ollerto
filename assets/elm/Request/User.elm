@@ -1,6 +1,9 @@
-module Request.User exposing (login, AuthenticateUser, AuthenticateUserResponse)
+module Request.User exposing (login, AuthenticateUserResponse)
 
 import Request.Helper as Helper
+import Data.User
+
+-- External
 import GraphQL.Request.Builder exposing (..)
 import GraphQL.Request.Builder.Variable as Var
 import GraphQL.Request.Builder.Arg as Arg
@@ -23,16 +26,17 @@ type alias AuthenticateUserResponse =
 
 login : { r | email : String, password : String } -> Task GraphQLClient.Error AuthenticateUser
 login { email, password } =
-    let
-        authenticateUserInput =
-            Var.required "input"
-                .input
-                (Var.object "AuthenticateUserInput"
-                    [ Var.field "email" .email Var.string
-                    , Var.field "password" .password Var.string
-                    ]
-                )
+    authenticateMutationRoot
+        |> mutationDocument
+        |> request
+            { input = { password = password, email = email }
+            }
+        |> Helper.sendMutationRequest
 
+
+authenticateMutationRoot : ValueSpec NonNull ObjectType AuthenticateUser { b | input : { a | email : String, password : String } }
+authenticateMutationRoot =
+    let
         user =
             object User
                 |> with (field "id" [] string)
@@ -42,17 +46,20 @@ login { email, password } =
             object AuthenticateUser
                 |> with (field "user" [] user)
                 |> with (field "token" [] string)
-
-        queryRoot =
-            extract
-                (field "authenticateUser"
-                    [ ( "input", Arg.variable authenticateUserInput ) ]
-                    authUser
-                )
     in
-        queryRoot
-            |> mutationDocument
-            |> request
-                { input = { password = password, email = email }
-                }
-            |> Helper.sendMutationRequest
+        extract
+            (field "authenticateUser"
+                [ ( "input", Arg.variable authenticateUserInput ) ]
+                authUser
+            )
+
+
+authenticateUserInput : Var.Variable { b | input : { a | email : String, password : String } }
+authenticateUserInput =
+    Var.required "input"
+        .input
+        (Var.object "AuthenticateUserInput"
+            [ Var.field "email" .email Var.string
+            , Var.field "password" .password Var.string
+            ]
+        )
