@@ -4,12 +4,15 @@ module Page.Login exposing (Msg, Model, initialModel, view, update)
 
 import Data.Session exposing (Session)
 import Data.User as User exposing (User)
-import Util
-
 
 -- Request
 
 import Request.User
+
+-- Helpers
+
+import Util
+import Route
 
 
 -- External
@@ -75,11 +78,18 @@ update msg model =
                                 |> Task.attempt ReceiveQueryResponse
                     in
                         Util.triple model cmd Nothing
+
                 _ ->
                     Util.triple { model | errors = [ "email and password are mandatory" ] } Cmd.none Nothing
 
-        ReceiveQueryResponse (Ok {user, token}) ->
-            Util.triple model Cmd.none (Just (User.build user.id user.email token))
+        ReceiveQueryResponse (Ok { user, token }) ->
+            let
+                userData = User.build user.id user.email token
+            in
+            Util.triple
+                model
+                (Cmd.batch [User.storeSession userData, Route.modifyUrl Route.Home])
+                (Just userData)
 
         ReceiveQueryResponse (Err (GraphQLError grErros)) ->
             let
