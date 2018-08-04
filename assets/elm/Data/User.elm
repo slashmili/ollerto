@@ -1,8 +1,14 @@
-module Data.User exposing (User, Username, build, storeSession)
+module Data.User exposing (User, Username, build, storeSession, loadSession, fromValue)
 
 import Data.AuthToken as AuthToken exposing (AuthToken)
-import Json.Encode as Encode exposing (Value)
 import Ports
+
+
+-- External
+
+import Json.Encode as Encode exposing (Value)
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline exposing (decode, required)
 
 
 type alias User =
@@ -30,6 +36,19 @@ storeSession user =
         |> Ports.storeSession
 
 
+loadSession : Decode.Value -> Maybe User
+loadSession =
+    (Decode.decodeValue decoder >> Result.toMaybe)
+
+
+fromValue : Value -> Maybe User
+fromValue json =
+    json
+        |> Decode.decodeValue Decode.string
+        |> Result.toMaybe
+        |> Maybe.andThen (Decode.decodeString decoder >> Result.toMaybe)
+
+
 encode : User -> Value
 encode user =
     Encode.object
@@ -40,6 +59,20 @@ encode user =
         ]
 
 
+decoder : Decoder User
+decoder =
+    decode User
+        |> required "id" Decode.string
+        |> required "email" Decode.string
+        |> required "token" AuthToken.decoder
+        |> required "username" usernameDecoder
+
+
 encodeUsername : Username -> Value
 encodeUsername (Username username) =
     Encode.string username
+
+
+usernameDecoder : Decoder Username
+usernameDecoder =
+    Decode.map Username Decode.string

@@ -1,13 +1,21 @@
 module Main exposing (..)
 
+
+-- Data
+import Data.User as User exposing (User, Username)
+import Data.Session exposing (Session)
+
+-- Page
 import Page.Home as Home
 import Page.Login as Login
-import Data.Session exposing (Session)
+
 import Route exposing (Route)
+import Ports
+
+-- External
 import Json.Decode as Decode exposing (Value)
 import Navigation exposing (Location)
 import Html exposing (..)
-import Ports
 
 
 type Page
@@ -35,9 +43,8 @@ init : Value -> Location -> ( Model, Cmd Msg )
 init value location =
     setRoute (Route.fromLocation location)
         { pageState = Loaded Blank
-        , session = { user = Nothing }
+        , session = { user = User.fromValue value }
         }
-
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
 setRoute maybeRoute model =
@@ -64,6 +71,8 @@ type Msg
     | SetRoute (Maybe Route)
     | LoginMsg Login.Msg
     | HomeMsg Home.Msg
+    | SetUser (Maybe User)
+
 
 
 
@@ -129,6 +138,18 @@ updatePage page msg model =
                 , Cmd.map LoginMsg cmd
                 )
 
+        ( SetUser user, _ ) ->
+            let
+                session = model.session
+                cmd =
+                    -- If we just signed out, then redirect to Home.
+                    if session.user /= Nothing && user == Nothing then
+                        Route.modifyUrl Route.Home
+                    else
+                        Cmd.none
+            in
+            ({ model | session = { session | user = user } }, cmd)
+
         _ ->
             ( model, Cmd.none )
 
@@ -139,9 +160,12 @@ updatePage page msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Sub.map SetUser sessionChange
 
 
+sessionChange : Sub (Maybe User)
+sessionChange =
+    Ports.onSessionChange User.loadSession
 
 -- MAIN
 
