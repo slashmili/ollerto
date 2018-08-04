@@ -1,8 +1,6 @@
 module Request.User exposing (login, AuthenticateUserResponse)
 
 import Request.Helper as Helper
-import Data.User
-
 
 -- External
 

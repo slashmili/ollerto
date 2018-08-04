@@ -1,7 +1,6 @@
 module Page.Home exposing (Model, Msg, view, initialModel)
 
 import Html exposing (..)
-import Html.Attributes exposing (..)
 import Data.Session exposing (Session)
 import Route exposing (Route)
 
