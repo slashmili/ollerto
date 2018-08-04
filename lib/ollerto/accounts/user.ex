@@ -10,6 +10,8 @@ defmodule Ollerto.Accounts.User do
 
     field(:password, :string, virtual: true)
 
+    has_many(:boards, Ollerto.Boards.Board, foreign_key: :owner_id)
+
     timestamps()
   end
 

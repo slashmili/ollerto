@@ -47,6 +47,7 @@ defmodule Ollerto.Mixfile do
       {:absinthe_phoenix, "~> 1.4"},
       {:comeonin, "~> 4.0"},
       {:pbkdf2_elixir, "~> 0.12.3"},
+      {:hashids, "~> 2.0"},
 
       # TOOLS
       {:dialyxir, "~> 1.0.0-rc.3", only: [:dev], runtime: false}

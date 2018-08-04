@@ -1,5 +1,7 @@
 locals_without_parens = [
   field: 2,
+  field: 3,
+  belongs_to: 2,
   get: 3,
   pipe_through: 1,
   forward: 2,
