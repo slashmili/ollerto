@@ -4,6 +4,7 @@ defmodule OllertoWeb.Schema do
   alias OllertoWeb.Schema.ChangesetErrorsMiddleware
 
   import_types __MODULE__.AccountTypes
+  import_types __MODULE__.BoardTypes
 
   def middleware(middleware, _field, %{identifier: :mutation}) do
     middleware ++ [ChangesetErrorsMiddleware]
@@ -29,6 +30,10 @@ defmodule OllertoWeb.Schema do
   end
 
   query do
+    field :me, :user do
+      resolve &AccountsReslover.me/3
+    end
+
     field :user_login, :user do
       resolve fn _, _, _ ->
         {:ok, %{id: "1", email: "TBD"}}

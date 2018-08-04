@@ -18,6 +18,14 @@ defmodule OllertoWeb.AccountsReslover do
     end
   end
 
+  def me(_, _, %{context: %{current_user: current_user}}) do
+    {:ok, current_user}
+  end
+
+  def me(_, _, _) do
+    {:ok, nil}
+  end
+
   # TODO: secure the salt!
   @user_salt "122112112"
   @max_age 7 * 24 * 3600
@@ -25,7 +33,10 @@ defmodule OllertoWeb.AccountsReslover do
     Phoenix.Token.sign(OllertoWeb.Endpoint, @user_salt, data)
   end
 
-  defp verify(token) do
+  @doc """
+  Verify a token
+  """
+  def verify(token) do
     Phoenix.Token.verify(OllertoWeb.Endpoint, @user_salt, token, max_age: @max_age)
   end
 end

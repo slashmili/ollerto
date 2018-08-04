@@ -15,10 +15,17 @@ defmodule Ollerto.Boards do
 
       iex> list_boards()
       [%Board{}, ...]
+      iex> list_boards(for_user: user)
+      [%Board{}, ...]
+
 
   """
   def list_boards do
     Repo.all(Board)
+  end
+
+  def list_boards(for_user: user) do
+    Repo.all(from(b in Board, where: b.owner_id == ^user.id))
   end
 
   @doc """

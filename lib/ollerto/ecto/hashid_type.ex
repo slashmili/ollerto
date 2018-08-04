@@ -4,7 +4,8 @@ defmodule Ollerto.Ecto.HashidType do
 
   def cast(hashid) when is_binary(hashid) do
     val =
-      Hashids.new()
+      [min_len: 4]
+      |> Hashids.new()
       |> Hashids.decode(hashid)
 
     case val do
@@ -20,7 +21,8 @@ defmodule Ollerto.Ecto.HashidType do
 
   def load(val) when is_integer(val) do
     hashid =
-      Hashids.new()
+      [min_len: 4]
+      |> Hashids.new()
       |> Hashids.encode(val)
 
     {:ok, hashid}

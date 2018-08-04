@@ -11,6 +11,7 @@ defmodule OllertoWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug OllertoWeb.Context
   end
 
   scope "/", OllertoWeb do
@@ -25,7 +26,6 @@ defmodule OllertoWeb.Router do
 
     forward "/v1/graphql", Absinthe.Plug.GraphiQL,
       schema: OllertoWeb.Schema,
-      interface: :simple,
       socket: OllertoWeb.UserSocket
   end
 end
