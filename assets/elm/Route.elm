@@ -6,13 +6,11 @@ import Html exposing (Attribute)
 import Html.Attributes as Attr
 
 
-
-
-
 type Route
     = Home
     | Root
     | Login
+
 
 route : Parser (Route -> a) a
 route =
@@ -20,6 +18,7 @@ route =
         [ Url.map Home (s "")
         , Url.map Login (s "login")
         ]
+
 
 routeToString : Route -> String
 routeToString page =
@@ -35,15 +34,18 @@ routeToString page =
                 Login ->
                     [ "login" ]
     in
-    "#/" ++ String.join "/" pieces
+        "#/" ++ String.join "/" pieces
+
 
 href : Route -> Attribute msg
 href route =
     Attr.href (routeToString route)
 
+
 modifyUrl : Route -> Cmd msg
 modifyUrl =
     routeToString >> Navigation.modifyUrl
+
 
 fromLocation : Location -> Maybe Route
 fromLocation location =

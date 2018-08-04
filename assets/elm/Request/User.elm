@@ -3,7 +3,9 @@ module Request.User exposing (login, AuthenticateUserResponse)
 import Request.Helper as Helper
 import Data.User
 
+
 -- External
+
 import GraphQL.Request.Builder exposing (..)
 import GraphQL.Request.Builder.Variable as Var
 import GraphQL.Request.Builder.Arg as Arg
@@ -19,6 +21,7 @@ type alias AuthenticateUser =
     { user : User
     , token : String
     }
+
 
 type alias AuthenticateUserResponse =
     Result GraphQLClient.Error AuthenticateUser
