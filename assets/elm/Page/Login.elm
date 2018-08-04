@@ -47,8 +47,17 @@ view session model =
         [ text "Login page"
         , div [] (List.map (\e -> text e) model.errors)
         , Html.form [ onSubmit SubmitForm ]
-            [ input [ onInput SetEmail, placeholder "Email" ] []
-            , input [ onInput SetPassword, placeholder "password" ] []
+            [ input
+                [ onInput SetEmail
+                , placeholder "Email"
+                ]
+                []
+            , input
+                [ onInput SetPassword
+                , type_ "password"
+                , placeholder "password"
+                ]
+                []
             ]
         , button [ onClick SubmitForm ] [ text "login now" ]
         ]
