@@ -54,10 +54,19 @@ setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
 setRoute maybeRoute model =
     case maybeRoute of
         Just (Route.Root) ->
-            ( model, Route.modifyUrl Route.Home )
+            case model.session.user of
+                Nothing ->
+                    ( model, Route.modifyUrl Route.Home )
+                Just user ->
+                    (model, Route.modifyUrl  (Route.Boards user.username))
 
         Just (Route.Home) ->
-            ( { model | pageState = Loaded (Home Home.initialModel) }, Cmd.none )
+            case model.session.user of
+                Nothing ->
+                    ( { model | pageState = Loaded (Home Home.initialModel) }, Cmd.none )
+                Just user ->
+                    (model, Route.modifyUrl  (Route.Boards user.username))
+
 
         Just (Route.Login) ->
             ( { model | pageState = Loaded (Login Login.initialModel) }, Cmd.none )

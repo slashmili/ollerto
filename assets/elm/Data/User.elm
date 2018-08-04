@@ -1,4 +1,4 @@
-module Data.User exposing (User, Username, build, storeSession, loadSession, fromValue)
+module Data.User exposing (User, Username, build, storeSession, loadSession, fromValue, usernameParser, usernameToString)
 
 import Data.AuthToken as AuthToken exposing (AuthToken)
 import Ports
@@ -9,6 +9,7 @@ import Ports
 import Json.Encode as Encode exposing (Value)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, required)
+import UrlParser
 
 
 type alias User =
@@ -25,7 +26,7 @@ type Username
 
 build : String -> String -> String -> User
 build id email token =
-    User id email (AuthToken.build token) (Username email)
+    User id email (AuthToken.build token) (Username id)
 
 
 storeSession : User -> Cmd msg
@@ -47,6 +48,14 @@ fromValue json =
         |> Decode.decodeValue Decode.string
         |> Result.toMaybe
         |> Maybe.andThen (Decode.decodeString decoder >> Result.toMaybe)
+
+usernameParser : UrlParser.Parser (Username -> a) a
+usernameParser =
+    UrlParser.custom "USERNAME" (Ok << Username)
+
+usernameToString : Username -> String
+usernameToString (Username username) =
+    username
 
 
 encode : User -> Value
