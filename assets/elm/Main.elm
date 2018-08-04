@@ -10,6 +10,11 @@ import Data.Session exposing (Session)
 
 import Page.Home as Home
 import Page.Login as Login
+import Page.Boards as Boards
+
+
+-- Tools
+
 import Route exposing (Route)
 import Ports
 
@@ -26,6 +31,7 @@ type Page
     | NotFound
     | Home Home.Model
     | Login Login.Model
+    | Boards Boards.Model
 
 
 type PageState
@@ -57,19 +63,24 @@ setRoute maybeRoute model =
             case model.session.user of
                 Nothing ->
                     ( model, Route.modifyUrl Route.Home )
+
                 Just user ->
-                    (model, Route.modifyUrl  (Route.Boards user.username))
+                    ( model, Route.modifyUrl (Route.Boards user.username) )
 
         Just (Route.Home) ->
             case model.session.user of
                 Nothing ->
                     ( { model | pageState = Loaded (Home Home.initialModel) }, Cmd.none )
-                Just user ->
-                    (model, Route.modifyUrl  (Route.Boards user.username))
 
+                Just user ->
+                    ( model, Route.modifyUrl (Route.Boards user.username) )
 
         Just (Route.Login) ->
             ( { model | pageState = Loaded (Login Login.initialModel) }, Cmd.none )
+
+        Just (Route.Boards username) ->
+            -- TODO: load current user boards
+            ( { model | pageState = Loaded (Boards Boards.initialModel) }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -82,9 +93,10 @@ setRoute maybeRoute model =
 type Msg
     = NoOp
     | SetRoute (Maybe Route)
+    | SetUser (Maybe User)
     | LoginMsg Login.Msg
     | HomeMsg Home.Msg
-    | SetUser (Maybe User)
+    | BoardsMsg Boards.Msg
 
 
 
@@ -111,6 +123,10 @@ viewPage session page =
         Home subModel ->
             Home.view session subModel
                 |> Html.map HomeMsg
+
+        Boards subModel ->
+            Boards.view session subModel
+                |> Html.map BoardsMsg
 
         _ ->
             text ("Page " ++ (toString page) ++ " ...")
@@ -148,6 +164,15 @@ updatePage page msg model =
             in
                 ( { newModule | pageState = Loaded (Login pageModel) }
                 , Cmd.map LoginMsg cmd
+                )
+
+        ( BoardsMsg subMsg, Boards subModel ) ->
+            let
+                ( pageModel, cmd) =
+                    Boards.update subMsg subModel
+            in
+                ( { model | pageState = Loaded (Boards pageModel) }
+                , Cmd.map BoardsMsg cmd
                 )
 
         ( SetUser user, _ ) ->
