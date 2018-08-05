@@ -42,8 +42,16 @@ defmodule OllertoWeb.Schema do
     end
 
     field :boards, list_of(:board) do
+      description "Lists boards for authorized user"
       middleware AuthorizeMiddleware
       resolve &BoardsReslover.list_boards/3
+    end
+
+    field :board, :board do
+      description "Lookups a board by hashid."
+      arg :hashid, non_null(:string)
+      middleware AuthorizeMiddleware
+      resolve &BoardsReslover.get_board/3
     end
 
     field :user_login, :user do

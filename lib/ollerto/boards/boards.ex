@@ -24,7 +24,7 @@ defmodule Ollerto.Boards do
     Repo.all(Board)
   end
 
-  def list_boards(for_user: user) do
+  def list_boards(owner: user) do
     Repo.all(from(b in Board, where: b.owner_id == ^user.id))
   end
 
@@ -43,6 +43,24 @@ defmodule Ollerto.Boards do
 
   """
   def get_board!(id), do: Repo.get!(Board, id)
+
+  @doc """
+  Gets a single board using provided criteria
+  """
+  def get_board(clauses) when is_list(clauses) do
+    clauses
+    |> Map.new()
+    |> get_board
+  end
+
+  def get_board(%{owner: %{id: owner_id}} = clauses) do
+    clauses
+    |> Map.drop([:owner])
+    |> Map.put(:owner_id, owner_id)
+    |> get_board
+  end
+
+  def get_board(clauses) when is_map(clauses), do: Repo.get_by(Board, clauses)
 
   @doc """
   Creates a board.
