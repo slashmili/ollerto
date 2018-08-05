@@ -11,6 +11,7 @@ import Data.Session exposing (Session)
 import Page.Home as Home
 import Page.Login as Login
 import Page.Boards as Boards
+import Page.Board as Board
 
 
 -- Tools
@@ -32,6 +33,7 @@ type Page
     | Home Home.Model
     | Login Login.Model
     | Boards Boards.Model
+    | Board Board.Model
 
 
 type PageState
@@ -82,6 +84,8 @@ setRoute maybeRoute model =
             -- TODO: load current user boards
             ( { model | pageState = Loaded (Boards Boards.initialModel) }, Cmd.none )
 
+        Just (Route.Board hashid) ->
+            ( { model | pageState = Loaded (Board Board.initialModel) }, Cmd.none )
         _ ->
             ( model, Cmd.none )
 
@@ -97,6 +101,7 @@ type Msg
     | LoginMsg Login.Msg
     | HomeMsg Home.Msg
     | BoardsMsg Boards.Msg
+    | BoardMsg Board.Msg
 
 
 
@@ -127,6 +132,10 @@ viewPage session page =
         Boards subModel ->
             Boards.view session subModel
                 |> Html.map BoardsMsg
+
+        Board subModel ->
+            Board.view session subModel
+                |> Html.map BoardMsg
 
         _ ->
             text ("Page " ++ (toString page) ++ " ...")
@@ -169,7 +178,7 @@ updatePage page msg model =
         ( BoardsMsg subMsg, Boards subModel ) ->
             let
                 ( pageModel, cmd) =
-                    Boards.update subMsg subModel
+                    Boards.update model.session subMsg subModel
             in
                 ( { model | pageState = Loaded (Boards pageModel) }
                 , Cmd.map BoardsMsg cmd
