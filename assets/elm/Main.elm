@@ -101,7 +101,13 @@ setRoute maybeRoute model =
                 ( { model | pageState = TransitioningFrom (Boards Boards.initialModel) }, cmd )
 
         Just (Route.Board hashid) ->
-            ( { model | pageState = Loaded (Board Board.initialModel) }, Cmd.none )
+            let
+                cmd =
+                    model.session
+                        |> Board.init hashid
+                        |> Cmd.map BoardMsg
+            in
+                ( { model | pageState = TransitioningFrom (Board Board.initialModel) }, cmd )
 
         _ ->
             ( model, Cmd.none )
@@ -200,6 +206,15 @@ updatePage page msg model =
             in
                 ( { model | pageState = Loaded (Boards pageModel) }
                 , Cmd.map BoardsMsg cmd
+                )
+
+        ( BoardMsg subMsg, Board subModel ) ->
+            let
+                ( pageModel, cmd ) =
+                    Board.update model.session subMsg subModel
+            in
+                ( { model | pageState = Loaded (Board pageModel) }
+                , Cmd.map BoardMsg cmd
                 )
 
         ( SetUser user, _ ) ->
