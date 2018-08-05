@@ -24,6 +24,7 @@ defmodule Ollerto.Boards.Board do
     board
     |> cast(attrs, [:name, :owner_id])
     |> validate_required([:name, :owner_id])
+    |> validate_length(:name, min: 3)
     |> foreign_key_constraint(:owner_id)
   end
 end

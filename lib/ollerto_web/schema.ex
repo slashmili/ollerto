@@ -1,7 +1,7 @@
 defmodule OllertoWeb.Schema do
   use Absinthe.Schema
-  alias OllertoWeb.AccountsReslover
-  alias OllertoWeb.Schema.ChangesetErrorsMiddleware
+  alias OllertoWeb.{AccountsReslover, BoardsReslover}
+  alias OllertoWeb.Schema.{ChangesetErrorsMiddleware, AuthorizeMiddleware}
 
   import_types __MODULE__.AccountTypes
   import_types __MODULE__.BoardTypes
@@ -26,6 +26,13 @@ defmodule OllertoWeb.Schema do
     field :authenticate_user, :authenticate_user_result do
       arg :input, non_null(:authenticate_user_input)
       resolve &AccountsReslover.authenticate_user/3
+    end
+
+    field :create_board, :create_board_result do
+      description "Creates board for authorized user"
+      arg :input, non_null(:create_board_input)
+      middleware AuthorizeMiddleware
+      resolve &BoardsReslover.create_board/3
     end
   end
 
