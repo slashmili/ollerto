@@ -18,25 +18,24 @@ import Route
 
 -- External
 
-import Html.Events exposing (onClick, onSubmit, onInput)
 import Html exposing (..)
-import Html.Attributes exposing (..)
-import Task exposing (Task)
-import GraphQL.Client.Http as GraphQLClient
+import Task
+import GraphQL.Client.Http exposing (Error(..))
 
 
 type Msg
-    = NoOp
-    | ReceiveQueryResponse Request.Board.BoardsResponse
+    = ReceiveQueryResponse Request.Board.BoardsResponse
 
 
 type alias Model =
     { boards : List Board
+    , errors : List String
     }
 
 
+initialModel : Model
 initialModel =
-    { boards = [] }
+    { boards = [], errors = [] }
 
 
 init : Session -> Cmd Msg
@@ -63,8 +62,22 @@ viewUserBoards model =
     in
         div []
             [ text "Your boards: "
+            , (viewErrors model)
             , ul [] (List.map (\b -> li [] [ (ahref b) ]) model.boards)
             ]
+
+
+viewErrors : Model -> Html Msg
+viewErrors model =
+    case model.errors of
+        [] ->
+            text ""
+
+        _ ->
+            div []
+                [ text "Couldn't fetch boards: "
+                , ul [] (List.map (\e -> li [] [ text e ]) model.errors)
+                ]
 
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
@@ -72,6 +85,13 @@ update session msg model =
     case msg of
         ReceiveQueryResponse (Ok boards) ->
             ( { model | boards = boards }, Cmd.none )
+
+        ReceiveQueryResponse (Err (GraphQLError grErros)) ->
+            let
+                errors =
+                    List.map .message grErros
+            in
+                ( { model | errors = errors }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )

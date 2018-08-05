@@ -25,7 +25,6 @@ import Ports
 import Json.Decode as Decode exposing (Value)
 import Navigation exposing (Location)
 import Html exposing (..)
-import Task exposing (Task)
 
 
 type Page
