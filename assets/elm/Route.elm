@@ -1,10 +1,13 @@
 module Route exposing (Route(..), fromLocation, modifyUrl, href)
 
 -- Data
+
 import Data.User as User exposing (Username)
 import Data.Board as Board exposing (Board)
 
+
 -- External
+
 import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string)
 import Navigation exposing (Location)
 import Html exposing (Attribute)
@@ -25,7 +28,7 @@ route =
         [ Url.map Home (s "")
         , Url.map Login (s "login")
         , Url.map Boards (User.usernameParser </> s "boards")
-        , Url.map Board (s "b" </> Board.hashidParser )
+        , Url.map Board (s "b" </> Board.hashidParser)
         ]
 
 
@@ -42,12 +45,12 @@ routeToString page =
 
                 Login ->
                     [ "login" ]
+
                 Boards username ->
                     [ User.usernameToString username, "boards" ]
+
                 Board hashid ->
                     [ "b", Board.hashidToString hashid ]
-
-
     in
         "#/" ++ String.join "/" pieces
 

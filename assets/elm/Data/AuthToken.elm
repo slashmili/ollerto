@@ -24,6 +24,7 @@ decoder =
     Decode.string
         |> Decode.map AuthToken
 
-toHeader: AuthToken -> Http.Header
+
+toHeader : AuthToken -> Http.Header
 toHeader (AuthToken token) =
     Http.header "Authorization" ("Bearer " ++ token)

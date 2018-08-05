@@ -64,8 +64,10 @@ getPage pageState =
     case pageState of
         Loaded page ->
             page
+
         TransitioningFrom page ->
             page
+
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
 setRoute maybeRoute model =
@@ -93,13 +95,14 @@ setRoute maybeRoute model =
             let
                 cmd =
                     model.session
-                    |> Boards.init
-                    |> Cmd.map BoardsMsg
+                        |> Boards.init
+                        |> Cmd.map BoardsMsg
             in
-            ( { model | pageState = TransitioningFrom (Boards Boards.initialModel) }, cmd )
+                ( { model | pageState = TransitioningFrom (Boards Boards.initialModel) }, cmd )
 
         Just (Route.Board hashid) ->
             ( { model | pageState = Loaded (Board Board.initialModel) }, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
@@ -127,9 +130,9 @@ view model =
     case model.pageState of
         Loaded page ->
             viewPage model.session False page
+
         TransitioningFrom page ->
             viewPage model.session True page
-
 
 
 viewPage : Session -> Bool -> Page -> Html Msg
@@ -192,7 +195,7 @@ updatePage page msg model =
 
         ( BoardsMsg subMsg, Boards subModel ) ->
             let
-                ( pageModel, cmd) =
+                ( pageModel, cmd ) =
                     Boards.update model.session subMsg subModel
             in
                 ( { model | pageState = Loaded (Boards pageModel) }

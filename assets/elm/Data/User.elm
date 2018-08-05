@@ -49,9 +49,11 @@ fromValue json =
         |> Result.toMaybe
         |> Maybe.andThen (Decode.decodeString decoder >> Result.toMaybe)
 
+
 usernameParser : UrlParser.Parser (Username -> a) a
 usernameParser =
     UrlParser.custom "USERNAME" (Ok << Username)
+
 
 usernameToString : Username -> String
 usernameToString (Username username) =

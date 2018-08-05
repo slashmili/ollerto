@@ -5,6 +5,7 @@ module Page.Board exposing (Msg, Model, view, update, initialModel)
 import Data.Session exposing (Session)
 import Data.Board exposing (Board)
 
+
 -- External
 
 import Html exposing (..)
@@ -19,6 +20,7 @@ type alias Model =
     }
 
 
+initialModel : Model
 initialModel =
     { board = Nothing }
 
@@ -28,6 +30,7 @@ view session model =
     div []
         [ text "View board"
         ]
+
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
