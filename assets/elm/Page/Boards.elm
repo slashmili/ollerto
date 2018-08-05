@@ -1,16 +1,20 @@
-module Page.Boards exposing (Msg, Model, view, update, initialModel)
+module Page.Boards exposing (Msg, Model, view, update, initialModel, init)
 
 -- Data
 
 import Data.Session exposing (Session)
 import Data.Board exposing (Board)
 
+
 -- Request
+
 import Request.Board
+
 
 -- Tools
 
 import Route
+
 
 -- External
 
@@ -18,11 +22,11 @@ import Html.Events exposing (onClick, onSubmit, onInput)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Task exposing (Task)
+import GraphQL.Client.Http as GraphQLClient
 
 
 type Msg
     = NoOp
-    | LoadBoards
     | ReceiveQueryResponse Request.Board.BoardsResponse
 
 
@@ -35,38 +39,39 @@ initialModel =
     { boards = [] }
 
 
+init : Session -> Cmd Msg
+init session =
+    session.user
+        |> Maybe.map .token
+        |> Request.Board.list
+        |> Task.attempt ReceiveQueryResponse
+
+
 view : Session -> Model -> Html Msg
 view session model =
     div []
         [ text "Create Board"
-          ,button [onClick LoadBoards] [text "load boards"]
-          ,(viewUserBoards model)
+        , (viewUserBoards model)
         ]
+
 
 viewUserBoards : Model -> Html Msg
 viewUserBoards model =
     let
-        ahref = (\board -> a [ Route.href (Route.Board board.hashid)] [ text board.name ])
+        ahref =
+            (\board -> a [ Route.href (Route.Board board.hashid) ] [ text board.name ])
     in
-    div [] [
-        text "Your boards: "
-        , ul [] (List.map (\b -> li [] [(ahref b)]) model.boards)
-        ]
+        div []
+            [ text "Your boards: "
+            , ul [] (List.map (\b -> li [] [ (ahref b) ]) model.boards)
+            ]
+
 
 update : Session -> Msg -> Model -> ( Model, Cmd Msg )
 update session msg model =
     case msg of
-        LoadBoards ->
-            let
-                maybeToken = Maybe.map .token session.user
-                cmd =
-                     maybeToken
-                    |> Request.Board.list
-                    |> Task.attempt ReceiveQueryResponse
-            in
-            ( model, cmd )
-
         ReceiveQueryResponse (Ok boards) ->
-            ( {model | boards = boards}, Cmd.none )
+            ( { model | boards = boards }, Cmd.none )
+
         _ ->
             ( model, Cmd.none )

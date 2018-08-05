@@ -25,6 +25,7 @@ import Ports
 import Json.Decode as Decode exposing (Value)
 import Navigation exposing (Location)
 import Html exposing (..)
+import Task exposing (Task)
 
 
 type Page
@@ -38,6 +39,7 @@ type Page
 
 type PageState
     = Loaded Page
+    | TransitioningFrom Page
 
 
 
@@ -57,6 +59,14 @@ init value location =
         , session = { user = User.fromValue value }
         }
 
+
+getPage : PageState -> Page
+getPage pageState =
+    case pageState of
+        Loaded page ->
+            page
+        TransitioningFrom page ->
+            page
 
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
 setRoute maybeRoute model =
@@ -81,8 +91,13 @@ setRoute maybeRoute model =
             ( { model | pageState = Loaded (Login Login.initialModel) }, Cmd.none )
 
         Just (Route.Boards username) ->
-            -- TODO: load current user boards
-            ( { model | pageState = Loaded (Boards Boards.initialModel) }, Cmd.none )
+            let
+                cmd =
+                    model.session
+                    |> Boards.init
+                    |> Cmd.map BoardsMsg
+            in
+            ( { model | pageState = TransitioningFrom (Boards Boards.initialModel) }, cmd )
 
         Just (Route.Board hashid) ->
             ( { model | pageState = Loaded (Board Board.initialModel) }, Cmd.none )
@@ -112,11 +127,14 @@ view : Model -> Html Msg
 view model =
     case model.pageState of
         Loaded page ->
-            viewPage model.session page
+            viewPage model.session False page
+        TransitioningFrom page ->
+            viewPage model.session True page
 
 
-viewPage : Session -> Page -> Html Msg
-viewPage session page =
+
+viewPage : Session -> Bool -> Page -> Html Msg
+viewPage session isLoading page =
     case page of
         NotFound ->
             Html.text "404 !"
@@ -147,9 +165,7 @@ viewPage session page =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case model.pageState of
-        Loaded page ->
-            updatePage page msg model
+    updatePage (getPage model.pageState) msg model
 
 
 updatePage : Page -> Msg -> Model -> ( Model, Cmd Msg )
