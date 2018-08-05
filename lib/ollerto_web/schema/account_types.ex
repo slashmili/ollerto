@@ -1,14 +1,9 @@
 defmodule OllertoWeb.Schema.AccountTypes do
   use Absinthe.Schema.Notation
-  alias OllertoWeb.BoardsReslover
 
   object :user do
     field :id, :id
     field :email, :string
-
-    field :boards, list_of(:board) do
-      resolve &BoardsReslover.list_boards/3
-    end
   end
 
   input_object :register_user_input do

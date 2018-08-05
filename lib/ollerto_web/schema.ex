@@ -41,6 +41,11 @@ defmodule OllertoWeb.Schema do
       resolve &AccountsReslover.me/3
     end
 
+    field :boards, list_of(:board) do
+      middleware AuthorizeMiddleware
+      resolve &BoardsReslover.list_boards/3
+    end
+
     field :user_login, :user do
       resolve fn _, _, _ ->
         {:ok, %{id: "1", email: "TBD"}}
