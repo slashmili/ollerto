@@ -35,7 +35,7 @@ boardQueryroot =
             object Board
                 |> with (field "id" [] string)
                 |> with (field "name" [] string)
-                |> with (field "hashid" [] string)
+                |> with (field "hashid" [] (map Data.Board.stringToHashid string))
     in
         extract
             (field "boards" [] (Builder.list board))
