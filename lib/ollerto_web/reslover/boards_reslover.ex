@@ -1,5 +1,6 @@
 defmodule OllertoWeb.BoardsReslover do
   alias Ollerto.Boards
+  alias Ollerto.Boards.Board
 
   def list_boards(_, _, %{context: %{current_user: current_user}}) do
     {:ok, Boards.list_boards(owner: current_user)}
@@ -16,5 +17,9 @@ defmodule OllertoWeb.BoardsReslover do
       nil -> {:error, %{message: "board is not found"}}
       board -> {:ok, board}
     end
+  end
+
+  def list_columns(%Board{} = board, _, _) do
+    {:ok, Boards.list_columns(board: board)}
   end
 end
