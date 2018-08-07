@@ -64,12 +64,20 @@ view session model =
         Just board ->
             div []
                 [ h1 [] [ text board.name ]
+                , viewColumns model
                 , viewNewColumn model
                 ]
 
         -- TODO: show lists form
         _ ->
             text "loading ..."
+
+
+viewColumns : Model -> Html Msg
+viewColumns model =
+    div []
+        [ ul [] (List.map (\c -> li [] [ text c.name ]) model.columns)
+        ]
 
 
 viewNewColumn : Model -> Html Msg
@@ -113,6 +121,14 @@ update session msg model =
                         |> Task.attempt ReceiveNewColumnMutationResponse
             in
                 ( model, cmd )
+
+        ReceiveNewColumnMutationResponse (Ok { object, errors }) ->
+            case object of
+                Just newColumn ->
+                    ( { model | columns = model.columns ++ [ newColumn ] }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         _ ->
             let

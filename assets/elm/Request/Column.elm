@@ -47,7 +47,7 @@ createColumnMutationRoot =
 
         result =
             object Helper.MutationResult
-                |> with (aliasAs "object" (field "column" [] column))
+                |> with (aliasAs "object" (field "column" [] (nullable column)))
                 |> with (field "errors" [] (list Helper.errorObject))
     in
         extract

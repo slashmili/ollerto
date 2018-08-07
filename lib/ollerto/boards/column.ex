@@ -6,7 +6,7 @@ defmodule Ollerto.Boards.Column do
   @foreign_key_type :binary_id
   schema "columns" do
     field :name, :string
-    field :order, :integer
+    field :order, :integer, default: 0
     field :board_id, :binary_id
 
     timestamps()

@@ -21,7 +21,7 @@ type alias ErrorResult =
 
 
 type alias MutationResult object =
-    { object : object, errors : List ErrorResult }
+    { object : Maybe object, errors : List ErrorResult }
 
 
 errorObject =

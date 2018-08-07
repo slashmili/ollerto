@@ -17,7 +17,7 @@ defmodule OllertoWeb.Schema.ChangesetErrorsMiddleware do
   defp transform_errors(%Ecto.Changeset{} = changeset) do
     changeset
     |> Ecto.Changeset.traverse_errors(&format_error/1)
-    |> Enum.map(fn {k, v} -> %{key: k, message: v} end)
+    |> Enum.map(fn {k, v} -> %{key: v, message: k} end)
   end
 
   defp format_error({msg, opts}) do
