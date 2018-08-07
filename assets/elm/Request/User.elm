@@ -33,7 +33,7 @@ login { email, password } =
         |> request
             { input = { password = password, email = email }
             }
-        |> Helper.sendMutationRequest
+        |> Helper.sendMutationRequest Nothing
 
 
 authenticateMutationRoot : ValueSpec NonNull ObjectType AuthenticateUser { b | input : { a | email : String, password : String } }

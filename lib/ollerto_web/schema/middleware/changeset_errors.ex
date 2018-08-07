@@ -2,8 +2,15 @@ defmodule OllertoWeb.Schema.ChangesetErrorsMiddleware do
   @behaviour Absinthe.Middleware
 
   def call(res, _) do
-    with %{errors: [%Ecto.Changeset{} = changeset]} <- res do
-      %{res | value: %{errors: transform_errors(changeset)}, errors: []}
+    case res do
+      %{errors: [%Ecto.Changeset{} = changeset]} ->
+        %{res | value: %{errors: transform_errors(changeset)}, errors: []}
+
+      %{value: %{errors: _}} ->
+        res
+
+      %{value: value} ->
+        %{res | value: Map.put(value, :errors, [])}
     end
   end
 

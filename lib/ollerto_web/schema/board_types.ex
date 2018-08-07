@@ -26,4 +26,15 @@ defmodule OllertoWeb.Schema.BoardTypes do
     field :board, :board
     field :errors, list_of(:input_error)
   end
+
+  input_object :create_column_input do
+    field :name, non_null(:string)
+    field :board_id, non_null(:id)
+    field :order, :integer
+  end
+
+  object :create_column_result do
+    field :column, :column
+    field :errors, list_of(:input_error)
+  end
 end

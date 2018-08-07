@@ -22,4 +22,11 @@ defmodule OllertoWeb.BoardsReslover do
   def list_columns(%Board{} = board, _, _) do
     {:ok, Boards.list_columns(board: board)}
   end
+
+  def create_column(_, %{input: params}, _) do
+    # TODO: check if user owns the board
+    with {:ok, column} <- Boards.create_column(params) do
+      {:ok, %{column: column}}
+    end
+  end
 end

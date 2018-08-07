@@ -34,6 +34,13 @@ defmodule OllertoWeb.Schema do
       middleware AuthorizeMiddleware
       resolve &BoardsReslover.create_board/3
     end
+
+    field :create_column, :create_column_result do
+      description "Creates column for authorized user"
+      arg :input, non_null(:create_column_input)
+      middleware AuthorizeMiddleware
+      resolve &BoardsReslover.create_column/3
+    end
   end
 
   query do

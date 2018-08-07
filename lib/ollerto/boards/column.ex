@@ -15,7 +15,7 @@ defmodule Ollerto.Boards.Column do
   @doc false
   def changeset(column, attrs) do
     column
-    |> cast(attrs, [:name, :order])
-    |> validate_required([:name, :order])
+    |> cast(attrs, [:name, :order, :board_id])
+    |> validate_required([:name, :order, :board_id])
   end
 end
