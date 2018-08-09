@@ -2,7 +2,8 @@ module Request.Board exposing (list, get, BoardsResponse, BoardResponse)
 
 -- Data
 
-import Data.Board exposing (Board, Hashid)
+import Data.Board exposing (Board, BoardWithRelations, Hashid)
+import Data.Column
 import Data.AuthToken exposing (AuthToken)
 
 
@@ -25,10 +26,10 @@ type alias BoardsResponse =
 
 
 type alias BoardResponse =
-    Result GraphQLClient.Error Board
+    Result GraphQLClient.Error BoardWithRelations
 
 
-get : Hashid -> Maybe AuthToken -> Task GraphQLClient.Error Board
+get : Hashid -> Maybe AuthToken -> Task GraphQLClient.Error BoardWithRelations
 get hashid maybeToken =
     boardQueryroot
         |> queryDocument
@@ -44,30 +45,17 @@ list maybeToken =
         |> Helper.sendQueryRequest maybeToken
 
 
-boardQueryroot : ValueSpec NonNull ObjectType Board { a | hashid : String }
+boardQueryroot : ValueSpec NonNull ObjectType BoardWithRelations { a | hashid : String }
 boardQueryroot =
     let
-        board =
-            object Board
-                |> with (field "id" [] string)
-                |> with (field "name" [] string)
-                |> with (field "hashid" [] (map Data.Board.stringToHashid string))
-
         hashid =
             Var.required "hashid" .hashid Var.string
     in
         extract
-            (field "board" [ ( "hashid", Arg.variable hashid ) ] board)
+            (field "board" [ ( "hashid", Arg.variable hashid ) ] Data.Board.objectWithRelation)
 
 
 boardsQueryroot : ValueSpec NonNull ObjectType (List Board) vars
 boardsQueryroot =
-    let
-        board =
-            object Board
-                |> with (field "id" [] string)
-                |> with (field "name" [] string)
-                |> with (field "hashid" [] (map Data.Board.stringToHashid string))
-    in
-        extract
-            (field "boards" [] (Builder.list board))
+    extract
+        (field "boards" [] (Builder.list Data.Board.object))

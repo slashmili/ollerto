@@ -39,15 +39,9 @@ create { name, boardId } maybeToken =
 createColumnMutationRoot : ValueSpec NonNull ObjectType (Helper.MutationResult Column) { b | input : { a | name : String, boardId : String } }
 createColumnMutationRoot =
     let
-        column =
-            object Column
-                |> with (field "id" [] string)
-                |> with (field "name" [] string)
-                |> with (field "order" [] int)
-
         result =
-            object Helper.MutationResult
-                |> with (aliasAs "object" (field "column" [] (nullable column)))
+            Builder.object Helper.MutationResult
+                |> with (aliasAs "object" (field "column" [] (nullable Data.Column.object)))
                 |> with (field "errors" [] (list Helper.errorObject))
     in
         extract

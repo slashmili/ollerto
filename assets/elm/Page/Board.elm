@@ -3,7 +3,7 @@ module Page.Board exposing (Msg, Model, init, view, update, initialModel)
 -- Data
 
 import Data.Session exposing (Session)
-import Data.Board exposing (Board, Hashid)
+import Data.Board exposing (BoardWithRelations, Hashid)
 import Data.Column exposing (Column)
 
 
@@ -36,9 +36,8 @@ type alias ColumnModelForm =
 
 
 type alias Model =
-    { board : Maybe Board
+    { board : Maybe BoardWithRelations
     , newColumn : ColumnModelForm
-    , columns : List Column
     }
 
 
@@ -46,7 +45,6 @@ initialModel : Model
 initialModel =
     { board = Nothing
     , newColumn = { name = "", errors = [], boardId = "" }
-    , columns = []
     }
 
 
@@ -75,9 +73,14 @@ view session model =
 
 viewColumns : Model -> Html Msg
 viewColumns model =
-    div []
-        [ ul [] (List.map (\c -> li [] [ text c.name ]) model.columns)
-        ]
+    case model.board of
+        Just board ->
+            div []
+                [ ul [] (List.map (\c -> li [] [ text c.name ]) board.columns)
+                ]
+
+        _ ->
+            text ""
 
 
 viewNewColumn : Model -> Html Msg
@@ -123,11 +126,15 @@ update session msg model =
                 ( model, cmd )
 
         ReceiveNewColumnMutationResponse (Ok { object, errors }) ->
-            case object of
-                Just newColumn ->
-                    ( { model | columns = model.columns ++ [ newColumn ] }, Cmd.none )
+            case ( model.board, object ) of
+                ( Just board, Just newColumn ) ->
+                    ( { model | board = Just ({ board | columns = board.columns ++ [ newColumn ] }) }, Cmd.none )
 
-                Nothing ->
+                ( Just board, Nothing ) ->
+                    -- TODO: read errors
+                    ( model, Cmd.none )
+
+                _ ->
                     ( model, Cmd.none )
 
         _ ->
