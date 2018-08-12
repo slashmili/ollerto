@@ -1,14 +1,12 @@
-module Data.User exposing (User, Username, build, storeSession, loadSession, fromValue, usernameParser, usernameToString)
-
-import Data.AuthToken as AuthToken exposing (AuthToken)
-import Ports
-
+module Data.User exposing (User, Username, build, fromValue, loadSession, storeSession, usernameParser, usernameToString)
 
 -- External
 
-import Json.Encode as Encode exposing (Value)
+import Data.AuthToken as AuthToken exposing (AuthToken)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, required)
+import Json.Encode as Encode exposing (Value)
+import Ports
 import UrlParser
 
 
@@ -39,7 +37,7 @@ storeSession user =
 
 loadSession : Decode.Value -> Maybe User
 loadSession =
-    (Decode.decodeValue decoder >> Result.toMaybe)
+    Decode.decodeValue decoder >> Result.toMaybe
 
 
 fromValue : Value -> Maybe User

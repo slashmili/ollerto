@@ -1,7 +1,7 @@
-module Page.Home exposing (Model, Msg, view, initialModel)
+module Page.Home exposing (Model, Msg, initialModel, view)
 
-import Html exposing (..)
 import Data.Session exposing (Session)
+import Html exposing (..)
 import Route exposing (Route)
 
 

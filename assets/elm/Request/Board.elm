@@ -1,24 +1,18 @@
-module Request.Board exposing (list, get, BoardsResponse, BoardResponse)
+module Request.Board exposing (BoardResponse, BoardsResponse, get, list)
 
 -- Data
-
-import Data.Board exposing (Board, BoardWithRelations, Hashid)
-import Data.Column
-import Data.AuthToken exposing (AuthToken)
-
-
 -- Tools
-
-import Request.Helper as Helper
-
-
 -- External
 
-import GraphQL.Request.Builder as Builder exposing (..)
-import GraphQL.Request.Builder.Variable as Var
-import GraphQL.Request.Builder.Arg as Arg
-import Task exposing (Task)
+import Data.AuthToken exposing (AuthToken)
+import Data.Board exposing (Board, BoardWithRelations, Hashid)
+import Data.Column
 import GraphQL.Client.Http as GraphQLClient
+import GraphQL.Request.Builder as Builder exposing (..)
+import GraphQL.Request.Builder.Arg as Arg
+import GraphQL.Request.Builder.Variable as Var
+import Request.Helper as Helper
+import Task exposing (Task)
 
 
 type alias BoardsResponse =
@@ -51,8 +45,8 @@ boardQueryroot =
         hashid =
             Var.required "hashid" .hashid Var.string
     in
-        extract
-            (field "board" [ ( "hashid", Arg.variable hashid ) ] Data.Board.objectWithRelation)
+    extract
+        (field "board" [ ( "hashid", Arg.variable hashid ) ] Data.Board.objectWithRelation)
 
 
 boardsQueryroot : ValueSpec NonNull ObjectType (List Board) vars

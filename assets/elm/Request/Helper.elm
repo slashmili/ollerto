@@ -1,15 +1,12 @@
-module Request.Helper exposing (sendQueryRequest, sendMutationRequest, errorObject, ErrorResult, MutationResult)
+module Request.Helper exposing (ErrorResult, MutationResult, errorObject, sendMutationRequest, sendQueryRequest)
 
 -- Data
-
-import Data.AuthToken as AuthToken exposing (AuthToken)
-
-
 -- External
 
-import Task exposing (Task)
+import Data.AuthToken as AuthToken exposing (AuthToken)
 import GraphQL.Client.Http as GraphQLClient
 import GraphQL.Request.Builder exposing (..)
+import Task exposing (Task)
 
 
 apiUrl =
@@ -43,7 +40,7 @@ sendQueryRequest maybeToken request =
                     , withCredentials = False
                     }
             in
-                GraphQLClient.customSendQuery requestOptions request
+            GraphQLClient.customSendQuery requestOptions request
 
         Nothing ->
             GraphQLClient.sendQuery apiUrl request
@@ -62,7 +59,7 @@ sendMutationRequest maybeToken request =
                     , withCredentials = False
                     }
             in
-                GraphQLClient.customSendMutation requestOptions request
+            GraphQLClient.customSendMutation requestOptions request
 
         Nothing ->
             GraphQLClient.sendMutation apiUrl request

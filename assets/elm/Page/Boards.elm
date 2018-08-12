@@ -1,26 +1,17 @@
-module Page.Boards exposing (Msg, Model, view, update, initialModel, init)
+module Page.Boards exposing (Model, Msg, init, initialModel, update, view)
 
 -- Data
-
-import Data.Session exposing (Session)
-import Data.Board exposing (Board)
-
-
 -- Request
-
-import Request.Board
-
-
 -- Tools
-
-import Route
-
-
 -- External
 
-import Html exposing (..)
-import Task
+import Data.Board exposing (Board)
+import Data.Session exposing (Session)
 import GraphQL.Client.Http exposing (Error(..))
+import Html exposing (..)
+import Request.Board
+import Route
+import Task
 
 
 type Msg
@@ -50,7 +41,7 @@ view : Session -> Model -> Html Msg
 view session model =
     div []
         [ text "Create Board"
-        , (viewUserBoards model)
+        , viewUserBoards model
         ]
 
 
@@ -58,13 +49,13 @@ viewUserBoards : Model -> Html Msg
 viewUserBoards model =
     let
         ahref =
-            (\board -> a [ Route.href (Route.Board board.hashid) ] [ text board.name ])
+            \board -> a [ Route.href (Route.Board board.hashid) ] [ text board.name ]
     in
-        div []
-            [ text "Your boards: "
-            , (viewErrors model)
-            , ul [] (List.map (\b -> li [] [ (ahref b) ]) model.boards)
-            ]
+    div []
+        [ text "Your boards: "
+        , viewErrors model
+        , ul [] (List.map (\b -> li [] [ ahref b ]) model.boards)
+        ]
 
 
 viewErrors : Model -> Html Msg
@@ -91,7 +82,7 @@ update session msg model =
                 errors =
                     List.map .message grErros
             in
-                ( { model | errors = errors }, Cmd.none )
+            ( { model | errors = errors }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )

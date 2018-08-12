@@ -1,30 +1,21 @@
 module Main exposing (..)
 
 -- Data
-
-import Data.User as User exposing (User, Username)
-import Data.Session exposing (Session)
-
-
 -- Page
-
-import Page.Home as Home
-import Page.Login as Login
-import Page.Boards as Boards
-import Page.Board as Board
-
-
 -- Tools
-
-import Route exposing (Route)
-import Ports
-
-
 -- External
 
+import Data.Session exposing (Session)
+import Data.User as User exposing (User, Username)
+import Html exposing (..)
 import Json.Decode as Decode exposing (Value)
 import Navigation exposing (Location)
-import Html exposing (..)
+import Page.Board as Board
+import Page.Boards as Boards
+import Page.Home as Home
+import Page.Login as Login
+import Ports
+import Route exposing (Route)
 
 
 type Page
@@ -72,7 +63,7 @@ getPage pageState =
 setRoute : Maybe Route -> Model -> ( Model, Cmd Msg )
 setRoute maybeRoute model =
     case maybeRoute of
-        Just (Route.Root) ->
+        Just Route.Root ->
             case model.session.user of
                 Nothing ->
                     ( model, Route.modifyUrl Route.Home )
@@ -80,7 +71,7 @@ setRoute maybeRoute model =
                 Just user ->
                     ( model, Route.modifyUrl (Route.Boards user.username) )
 
-        Just (Route.Home) ->
+        Just Route.Home ->
             case model.session.user of
                 Nothing ->
                     ( { model | pageState = Loaded (Home Home.initialModel) }, Cmd.none )
@@ -88,7 +79,7 @@ setRoute maybeRoute model =
                 Just user ->
                     ( model, Route.modifyUrl (Route.Boards user.username) )
 
-        Just (Route.Login) ->
+        Just Route.Login ->
             ( { model | pageState = Loaded (Login Login.initialModel) }, Cmd.none )
 
         Just (Route.Boards username) ->
@@ -98,7 +89,7 @@ setRoute maybeRoute model =
                         |> Boards.init
                         |> Cmd.map BoardsMsg
             in
-                ( { model | pageState = TransitioningFrom (Boards Boards.initialModel) }, cmd )
+            ( { model | pageState = TransitioningFrom (Boards Boards.initialModel) }, cmd )
 
         Just (Route.Board hashid) ->
             let
@@ -107,7 +98,7 @@ setRoute maybeRoute model =
                         |> Board.init hashid
                         |> Cmd.map BoardMsg
             in
-                ( { model | pageState = TransitioningFrom (Board Board.initialModel) }, cmd )
+            ( { model | pageState = TransitioningFrom (Board Board.initialModel) }, cmd )
 
         _ ->
             ( model, Cmd.none )
@@ -164,7 +155,7 @@ viewPage session isLoading page =
                 |> Html.map BoardMsg
 
         _ ->
-            text ("Page " ++ (toString page) ++ " ...")
+            text ("Page " ++ toString page ++ " ...")
 
 
 
@@ -195,27 +186,27 @@ updatePage page msg model =
                         Nothing ->
                             model
             in
-                ( { newModule | pageState = Loaded (Login pageModel) }
-                , Cmd.map LoginMsg cmd
-                )
+            ( { newModule | pageState = Loaded (Login pageModel) }
+            , Cmd.map LoginMsg cmd
+            )
 
         ( BoardsMsg subMsg, Boards subModel ) ->
             let
                 ( pageModel, cmd ) =
                     Boards.update model.session subMsg subModel
             in
-                ( { model | pageState = Loaded (Boards pageModel) }
-                , Cmd.map BoardsMsg cmd
-                )
+            ( { model | pageState = Loaded (Boards pageModel) }
+            , Cmd.map BoardsMsg cmd
+            )
 
         ( BoardMsg subMsg, Board subModel ) ->
             let
                 ( pageModel, cmd ) =
                     Board.update model.session subMsg subModel
             in
-                ( { model | pageState = Loaded (Board pageModel) }
-                , Cmd.map BoardMsg cmd
-                )
+            ( { model | pageState = Loaded (Board pageModel) }
+            , Cmd.map BoardMsg cmd
+            )
 
         ( SetUser user, _ ) ->
             let
@@ -226,10 +217,11 @@ updatePage page msg model =
                     -- If we just signed out, then redirect to Home.
                     if session.user /= Nothing && user == Nothing then
                         Route.modifyUrl Route.Home
+
                     else
                         Cmd.none
             in
-                ( { model | session = { session | user = user } }, cmd )
+            ( { model | session = { session | user = user } }, cmd )
 
         _ ->
             ( model, Cmd.none )

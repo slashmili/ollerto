@@ -1,12 +1,10 @@
-module Data.Board exposing (Board, BoardWithRelations, Hashid, stringToHashid, hashidParser, hashidToString, object, objectWithRelation)
-
-import Data.Column exposing (Column)
-
+module Data.Board exposing (Board, BoardWithRelations, Hashid, hashidParser, hashidToString, object, objectWithRelation, stringToHashid)
 
 -- External
 
-import UrlParser
+import Data.Column exposing (Column)
 import GraphQL.Request.Builder as Builder
+import UrlParser
 
 
 type alias Board =

@@ -1,29 +1,20 @@
-module Page.Login exposing (Msg, Model, initialModel, view, update)
+module Page.Login exposing (Model, Msg, initialModel, update, view)
 
 -- Data
+-- Request
+-- Helpers
+-- External
 
 import Data.Session exposing (Session)
 import Data.User as User exposing (User)
-
-
--- Request
-
-import Request.User
-
-
--- Helpers
-
-import Util
-import Route
-
-
--- External
-
-import Html.Events exposing (onClick, onSubmit, onInput)
+import GraphQL.Client.Http as GraphQLClient exposing (Error(..))
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import GraphQL.Client.Http as GraphQLClient exposing (Error(..))
+import Html.Events exposing (onClick, onInput, onSubmit)
+import Request.User
+import Route
 import Task exposing (Task)
+import Util
 
 
 type alias Model =
@@ -88,7 +79,7 @@ update msg model =
                                 |> Request.User.login
                                 |> Task.attempt ReceiveQueryResponse
                     in
-                        Util.triple model cmd Nothing
+                    Util.triple model cmd Nothing
 
                 _ ->
                     Util.triple { model | errors = [ "email and password are mandatory" ] } Cmd.none Nothing
@@ -98,17 +89,17 @@ update msg model =
                 userData =
                     User.build user.id user.email token
             in
-                Util.triple
-                    model
-                    (Cmd.batch [ User.storeSession userData, Route.modifyUrl Route.Home ])
-                    (Just userData)
+            Util.triple
+                model
+                (Cmd.batch [ User.storeSession userData, Route.modifyUrl Route.Home ])
+                (Just userData)
 
         ReceiveQueryResponse (Err (GraphQLError grErros)) ->
             let
                 errors =
                     List.map .message grErros
             in
-                Util.triple { model | errors = errors } Cmd.none Nothing
+            Util.triple { model | errors = errors } Cmd.none Nothing
 
         ReceiveQueryResponse (Result.Err (HttpError _)) ->
             Util.triple { model | errors = [ "Internal error!" ] } Cmd.none Nothing

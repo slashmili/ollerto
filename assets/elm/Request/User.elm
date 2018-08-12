@@ -1,15 +1,13 @@
-module Request.User exposing (login, AuthenticateUserResponse)
-
-import Request.Helper as Helper
-
+module Request.User exposing (AuthenticateUserResponse, login)
 
 -- External
 
-import GraphQL.Request.Builder exposing (..)
-import GraphQL.Request.Builder.Variable as Var
-import GraphQL.Request.Builder.Arg as Arg
-import Task exposing (Task)
 import GraphQL.Client.Http as GraphQLClient
+import GraphQL.Request.Builder exposing (..)
+import GraphQL.Request.Builder.Arg as Arg
+import GraphQL.Request.Builder.Variable as Var
+import Request.Helper as Helper
+import Task exposing (Task)
 
 
 type alias User =
@@ -49,11 +47,11 @@ authenticateMutationRoot =
                 |> with (field "user" [] user)
                 |> with (field "token" [] string)
     in
-        extract
-            (field "authenticateUser"
-                [ ( "input", Arg.variable authenticateUserInput ) ]
-                authUser
-            )
+    extract
+        (field "authenticateUser"
+            [ ( "input", Arg.variable authenticateUserInput ) ]
+            authUser
+        )
 
 
 authenticateUserInput : Var.Variable { b | input : { a | email : String, password : String } }

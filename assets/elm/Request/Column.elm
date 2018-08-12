@@ -1,23 +1,17 @@
-module Request.Column exposing (ColumnResponse, ColumnMutationResponse, create)
+module Request.Column exposing (ColumnMutationResponse, ColumnResponse, create)
 
 -- Data
-
-import Data.Column exposing (Column)
-import Data.AuthToken exposing (AuthToken)
-
-
 -- Tools
-
-import Request.Helper as Helper
-
-
 -- External
 
-import GraphQL.Request.Builder as Builder exposing (..)
-import GraphQL.Request.Builder.Variable as Var
-import GraphQL.Request.Builder.Arg as Arg
-import Task exposing (Task)
+import Data.AuthToken exposing (AuthToken)
+import Data.Column exposing (Column)
 import GraphQL.Client.Http as GraphQLClient
+import GraphQL.Request.Builder as Builder exposing (..)
+import GraphQL.Request.Builder.Arg as Arg
+import GraphQL.Request.Builder.Variable as Var
+import Request.Helper as Helper
+import Task exposing (Task)
 
 
 type alias ColumnResponse =
@@ -44,11 +38,11 @@ createColumnMutationRoot =
                 |> with (aliasAs "object" (field "column" [] (nullable Data.Column.object)))
                 |> with (field "errors" [] (list Helper.errorObject))
     in
-        extract
-            (field "createColumn"
-                [ ( "input", Arg.variable createColumnInput ) ]
-                result
-            )
+    extract
+        (field "createColumn"
+            [ ( "input", Arg.variable createColumnInput ) ]
+            result
+        )
 
 
 createColumnInput : Var.Variable { b | input : { a | name : String, boardId : String } }

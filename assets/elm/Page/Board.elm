@@ -1,23 +1,17 @@
-module Page.Board exposing (Msg, Model, init, view, update, initialModel)
+module Page.Board exposing (Model, Msg, init, initialModel, update, view)
 
 -- Data
-
-import Data.Session exposing (Session)
-import Data.Board exposing (BoardWithRelations, Hashid)
-import Data.Column exposing (Column)
-
-
 -- Request
-
-import Request.Board
-import Request.Column
-
-
 -- External
 
+import Data.Board exposing (BoardWithRelations, Hashid)
+import Data.Column exposing (Column)
+import Data.Session exposing (Session)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onSubmit, onInput)
+import Html.Events exposing (onClick, onInput, onSubmit)
+import Request.Board
+import Request.Column
 import Task
 
 
@@ -106,14 +100,14 @@ update session msg model =
                 newColumn =
                     model.newColumn
             in
-                ( { model | board = Just board, newColumn = { newColumn | boardId = board.id } }, Cmd.none )
+            ( { model | board = Just board, newColumn = { newColumn | boardId = board.id } }, Cmd.none )
 
         SetNewColumnName name ->
             let
                 newColumn =
                     model.newColumn
             in
-                ( { model | newColumn = { newColumn | name = name } }, Cmd.none )
+            ( { model | newColumn = { newColumn | name = name } }, Cmd.none )
 
         SubmitNewColumn ->
             let
@@ -123,12 +117,12 @@ update session msg model =
                         |> Request.Column.create model.newColumn
                         |> Task.attempt ReceiveNewColumnMutationResponse
             in
-                ( model, cmd )
+            ( model, cmd )
 
         ReceiveNewColumnMutationResponse (Ok { object, errors }) ->
             case ( model.board, object ) of
                 ( Just board, Just newColumn ) ->
-                    ( { model | board = Just ({ board | columns = board.columns ++ [ newColumn ] }) }, Cmd.none )
+                    ( { model | board = Just { board | columns = board.columns ++ [ newColumn ] } }, Cmd.none )
 
                 ( Just board, Nothing ) ->
                     -- TODO: read errors
@@ -142,4 +136,4 @@ update session msg model =
                 _ =
                     Debug.log "msg" msg
             in
-                ( model, Cmd.none )
+            ( model, Cmd.none )

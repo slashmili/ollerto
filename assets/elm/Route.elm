@@ -1,17 +1,14 @@
-module Route exposing (Route(..), fromLocation, modifyUrl, href)
+module Route exposing (Route(..), fromLocation, href, modifyUrl)
 
 -- Data
-
-import Data.User as User exposing (Username)
-import Data.Board as Board exposing (Board)
-
-
 -- External
 
-import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string)
-import Navigation exposing (Location)
+import Data.Board as Board exposing (Board)
+import Data.User as User exposing (Username)
 import Html exposing (Attribute)
 import Html.Attributes as Attr
+import Navigation exposing (Location)
+import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string)
 
 
 type Route
@@ -52,7 +49,7 @@ routeToString page =
                 Board hashid ->
                     [ "b", Board.hashidToString hashid ]
     in
-        "#/" ++ String.join "/" pieces
+    "#/" ++ String.join "/" pieces
 
 
 href : Route -> Attribute msg
@@ -69,5 +66,6 @@ fromLocation : Location -> Maybe Route
 fromLocation location =
     if String.isEmpty location.hash then
         Just Root
+
     else
         parseHash route location
