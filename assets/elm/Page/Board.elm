@@ -1,9 +1,5 @@
 module Page.Board exposing (Model, Msg, init, initialModel, update, view)
 
--- Data
--- Request
--- External
-
 import Data.Board exposing (BoardWithRelations, Hashid)
 import Data.Column exposing (Column)
 import Data.Session exposing (Session)
