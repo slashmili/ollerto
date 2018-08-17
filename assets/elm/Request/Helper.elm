@@ -1,4 +1,4 @@
-module Request.Helper exposing (ErrorResult, MutationResult, errorObject, sendMutationRequest, sendQueryRequest)
+module Request.Helper exposing (ErrorResult, MutationResult, errorObject, sendMutationRequest, sendQueryRequest, subscriptionDecoder, subscriptionPayload)
 
 -- Data
 -- External
@@ -6,6 +6,9 @@ module Request.Helper exposing (ErrorResult, MutationResult, errorObject, sendMu
 import Data.AuthToken as AuthToken exposing (AuthToken)
 import GraphQL.Client.Http as GraphQLClient
 import GraphQL.Request.Builder exposing (..)
+import Json.Decode
+import Json.Encode
+import Regex exposing (HowMany(..))
 import Task exposing (Task)
 
 
@@ -63,3 +66,26 @@ sendMutationRequest maybeToken request =
 
         Nothing ->
             GraphQLClient.sendMutation apiUrl request
+
+
+subscriptionPayload : Request Query a -> Json.Encode.Value
+subscriptionPayload request =
+    let
+        documentValue =
+            request
+                |> requestBody
+                |> Regex.replace (AtMost 1) (Regex.regex "query") (\_ -> "subscription")
+                |> Json.Encode.string
+
+        extraParams =
+            request
+                |> jsonVariableValues
+                |> Maybe.map (\obj -> [ ( "variables", obj ) ])
+                |> Maybe.withDefault []
+    in
+    Json.Encode.object ([ ( "query", documentValue ) ] ++ extraParams)
+
+
+subscriptionDecoder : Request Query a -> Json.Decode.Decoder a
+subscriptionDecoder request =
+    Json.Decode.field "data" (responseDataDecoder request)

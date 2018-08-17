@@ -25,7 +25,13 @@ defmodule OllertoWeb.BoardsReslover do
 
   def create_column(_, %{input: params}, _) do
     # TODO: check if user owns the board
+    board = Boards.get_board!(params.board_id)
+
     with {:ok, column} <- Boards.create_column(params) do
+      Absinthe.Subscription.publish(OllertoWeb.Endpoint, %{action: :created, column: column},
+        board_column_event: board.hashid
+      )
+
       {:ok, %{column: column}}
     end
   end

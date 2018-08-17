@@ -1,15 +1,17 @@
-module Request.Column exposing (ColumnMutationResponse, ColumnResponse, create)
+module Request.Column exposing (ColumnMutationResponse, ColumnResponse, create, subscribeColumnChange, subscribeColumnChangeDecoder)
 
 -- Data
 -- Tools
 -- External
 
 import Data.AuthToken exposing (AuthToken)
-import Data.Column exposing (Column)
+import Data.Column exposing (Column, ColumnEvent)
 import GraphQL.Client.Http as GraphQLClient
 import GraphQL.Request.Builder as Builder exposing (..)
 import GraphQL.Request.Builder.Arg as Arg
 import GraphQL.Request.Builder.Variable as Var
+import Json.Decode
+import Json.Encode
 import Request.Helper as Helper
 import Task exposing (Task)
 
@@ -28,6 +30,22 @@ create { name, boardId } maybeToken =
         |> mutationDocument
         |> request { input = { name = name, boardId = boardId } }
         |> Helper.sendMutationRequest maybeToken
+
+
+subscribeColumnChange : String -> Json.Encode.Value
+subscribeColumnChange hashid =
+    createColumnChangeSubscriptionroot
+        |> queryDocument
+        |> request { hashid = hashid }
+        |> Helper.subscriptionPayload
+
+
+subscribeColumnChangeDecoder : Json.Decode.Decoder ColumnEvent
+subscribeColumnChangeDecoder =
+    createColumnChangeSubscriptionroot
+        |> queryDocument
+        |> request { hashid = "" }
+        |> Helper.subscriptionDecoder
 
 
 createColumnMutationRoot : ValueSpec NonNull ObjectType (Helper.MutationResult Column) { b | input : { a | name : String, boardId : String } }
@@ -54,3 +72,13 @@ createColumnInput =
             , Var.field "board_id" .boardId Var.string
             ]
         )
+
+
+createColumnChangeSubscriptionroot : ValueSpec NonNull ObjectType ColumnEvent { a | hashid : String }
+createColumnChangeSubscriptionroot =
+    let
+        hashid =
+            Var.required "boardHashid" .hashid Var.string
+    in
+    extract
+        (field "boardColumnEvent" [ ( "boardHashid", Arg.variable hashid ) ] Data.Column.columnEventObject)

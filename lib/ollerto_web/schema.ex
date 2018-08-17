@@ -68,15 +68,40 @@ defmodule OllertoWeb.Schema do
     end
   end
 
+  object :column_event do
+    field :action, :string
+    field :column, :column
+  end
+
   subscription do
-    field :new_order, :user do
-      arg :id, non_null(:id)
+    field :board_column_event, :column_event do
+      arg :board_hashid, non_null(:string)
+
+      config(fn args, sc ->
+        {:ok, topic: args.board_hashid}
+      end)
+    end
+
+    field :board, :board do
+      arg :hashid, non_null(:string)
 
       config(fn args, sc ->
         IO.inspect(args)
         IO.inspect(sc)
-        {:ok, topic: args.id}
+        {:ok, topic: args.hashid}
       end)
+
+      trigger(:updated_board,
+        topic: fn
+          %{updated: board}, _ -> [board.hashid]
+          _, _ -> []
+        end
+      )
+
+      resolve fn root, _, _ ->
+        IO.inspect(root)
+        {:ok, root}
+      end
     end
   end
 end

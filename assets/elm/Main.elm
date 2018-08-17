@@ -233,7 +233,22 @@ updatePage page msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.map SetUser sessionChange
+    Sub.batch
+        [ pageSubscriptions (getPage model.pageState)
+        , Sub.map SetUser sessionChange
+        ]
+
+
+pageSubscriptions : Page -> Sub Msg
+pageSubscriptions page =
+    case page of
+        Board model ->
+            model
+                |> Board.subscriptions
+                |> Sub.map BoardMsg
+
+        _ ->
+            Sub.none
 
 
 sessionChange : Sub (Maybe User)
