@@ -5,6 +5,8 @@ module Main exposing (..)
 -- Tools
 -- External
 
+import Data.AuthToken as AuthToken
+import Data.Connection as Connection exposing (Connection)
 import Data.Session exposing (Session)
 import Data.User as User exposing (User, Username)
 import Html exposing (..)
@@ -14,6 +16,9 @@ import Page.Board as Board
 import Page.Boards as Boards
 import Page.Home as Home
 import Page.Login as Login
+import Phoenix
+import Phoenix.Message as PhxMsg
+import Phoenix.Socket as Socket
 import Ports
 import Route exposing (Route)
 
@@ -39,14 +44,28 @@ type PageState
 type alias Model =
     { session : Session
     , pageState : PageState
+    , connection : Connection Msg
     }
 
 
 init : Value -> Location -> ( Model, Cmd Msg )
 init value location =
+    let
+        user =
+            User.fromValue value
+
+        token =
+            case user of
+                Just u ->
+                    AuthToken.toString u.token
+
+                _ ->
+                    ""
+    in
     setRoute (Route.fromLocation location)
         { pageState = Loaded Blank
-        , session = { user = User.fromValue value }
+        , session = { user = user }
+        , connection = { socket = Socket.init ("ws://localhost:4000/socket/websocket?token=" ++ token), mapMessage = PhoenixMsg }
         }
 
 
@@ -93,12 +112,10 @@ setRoute maybeRoute model =
 
         Just (Route.Board hashid) ->
             let
-                cmd =
-                    model.session
-                        |> Board.init hashid
-                        |> Cmd.map BoardMsg
+                ( socket, cmd ) =
+                    Board.init hashid model.connection (\m -> BoardMsg m)
             in
-            ( { model | pageState = TransitioningFrom (Board Board.initialModel) }, cmd )
+            ( { model | connection = Connection.updateConnection socket model.connection, pageState = TransitioningFrom (Board Board.initialModel) }, cmd )
 
         _ ->
             ( model, Cmd.none )
@@ -116,6 +133,7 @@ type Msg
     | HomeMsg Home.Msg
     | BoardsMsg Boards.Msg
     | BoardMsg Board.Msg
+    | PhoenixMsg (PhxMsg.Msg Msg)
 
 
 
@@ -201,11 +219,11 @@ updatePage page msg model =
 
         ( BoardMsg subMsg, Board subModel ) ->
             let
-                ( pageModel, cmd ) =
-                    Board.update model.session subMsg subModel
+                ( pageModel, cmd, connection, mainPageMsg ) =
+                    Board.update model.session model.connection (\m -> BoardMsg m) subMsg subModel
             in
-            ( { model | pageState = Loaded (Board pageModel) }
-            , Cmd.map BoardMsg cmd
+            ( { model | pageState = Loaded (Board pageModel), connection = connection }
+            , Cmd.batch [ Cmd.map BoardMsg cmd, mainPageMsg ]
             )
 
         ( SetUser user, _ ) ->
@@ -223,6 +241,13 @@ updatePage page msg model =
             in
             ( { model | session = { session | user = user } }, cmd )
 
+        ( PhoenixMsg msg, _ ) ->
+            let
+                ( socket, cmd ) =
+                    Phoenix.update PhoenixMsg msg model.connection.socket
+            in
+            ( { model | connection = Connection.updateConnection socket model.connection }, cmd )
+
         _ ->
             ( model, Cmd.none )
 
@@ -236,19 +261,13 @@ subscriptions model =
     Sub.batch
         [ pageSubscriptions (getPage model.pageState)
         , Sub.map SetUser sessionChange
+        , Phoenix.listen PhoenixMsg model.connection.socket
         ]
 
 
 pageSubscriptions : Page -> Sub Msg
 pageSubscriptions page =
-    case page of
-        Board model ->
-            model
-                |> Board.subscriptions
-                |> Sub.map BoardMsg
-
-        _ ->
-            Sub.none
+    Sub.none
 
 
 sessionChange : Sub (Maybe User)

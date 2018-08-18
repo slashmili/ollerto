@@ -1,4 +1,15 @@
-module Request.Helper exposing (ErrorResult, MutationResult, errorObject, sendMutationRequest, sendQueryRequest, subscriptionDecoder, subscriptionPayload)
+module Request.Helper
+    exposing
+        ( ErrorResult
+        , MutationResult
+        , errorObject
+        , queryDecoder
+        , queryPayload
+        , sendMutationRequest
+        , sendQueryRequest
+        , subscriptionDecoder
+        , subscriptionPayload
+        )
 
 -- Data
 -- External
@@ -88,4 +99,26 @@ subscriptionPayload request =
 
 subscriptionDecoder : Request Query a -> Json.Decode.Decoder a
 subscriptionDecoder request =
+    Json.Decode.field "data" (responseDataDecoder request)
+
+
+queryPayload : Request Query a -> Json.Encode.Value
+queryPayload request =
+    let
+        documentValue =
+            request
+                |> requestBody
+                |> Json.Encode.string
+
+        extraParams =
+            request
+                |> jsonVariableValues
+                |> Maybe.map (\obj -> [ ( "variables", obj ) ])
+                |> Maybe.withDefault []
+    in
+    Json.Encode.object ([ ( "query", documentValue ) ] ++ extraParams)
+
+
+queryDecoder : Request Query a -> Json.Decode.Decoder a
+queryDecoder request =
     Json.Decode.field "data" (responseDataDecoder request)

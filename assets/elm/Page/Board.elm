@@ -2,6 +2,7 @@ module Page.Board exposing (Model, Msg, init, initialModel, subscriptions, updat
 
 import Data.Board exposing (BoardWithRelations, Hashid)
 import Data.Column exposing (ColumnEvent)
+import Data.Connection as Connection exposing (Connection)
 import Data.Session exposing (Session)
 import Dict exposing (Dict)
 import Html exposing (..)
@@ -23,12 +24,10 @@ import Task
 type Msg
     = SubmitNewColumn
     | SetNewColumnName String
-    | SetSocket (Socket.Socket Msg)
-    | PhoenixMsg (PhxMsg.Msg Msg)
     | JoinedAbsintheControl Value
     | BoardChangeEvent Value
     | SubscribedToBoard Value
-    | ReceiveQueryResponse Request.Board.BoardResponse
+    | BoardLoaded Value
     | ReceiveNewColumnMutationResponse Request.Column.ColumnMutationResponse
 
 
@@ -46,7 +45,6 @@ type alias ColumnModelForm =
 type alias Model =
     { board : Maybe BoardWithRelations
     , newColumn : ColumnModelForm
-    , phxSocket : Socket.Socket Msg
     , subscriptionEventType : Dict String EventType
     }
 
@@ -60,7 +58,6 @@ initialModel : Model
 initialModel =
     { board = Nothing
     , newColumn = { name = "", errors = [], boardId = "" }
-    , phxSocket = initSocket
     , subscriptionEventType = Dict.empty
     }
 
@@ -73,30 +70,29 @@ initSocket =
     Socket.init "ws://localhost:4000/socket/websocket"
 
 
-channel =
-    absintheChannelName
-        |> Channel.init
-        |> Channel.onJoin JoinedAbsintheControl
-
-
-init : Hashid -> Session -> Cmd Msg
-init hashid session =
+init : Hashid -> Connection msg -> (Msg -> msg) -> ( Socket.Socket msg, Cmd msg )
+init hashid connection pageExternalMsg =
     let
-        ( socket, phxCmd ) =
-            Phoenix.join PhoenixMsg channel initSocket
+        channel =
+            absintheChannelName
+                |> Channel.init
 
-        setSocketCmd =
-            SetSocket socket
-                |> Task.succeed
-                |> Task.perform identity
+        --|> Channel.onJoin (pageExternalMsg << JoinedAbsintheControl)
+        ( socket1, phxCmd1 ) =
+            Phoenix.join connection.mapMessage channel connection.socket
 
-        boardCmd =
-            session.user
-                |> Maybe.map .token
-                |> Request.Board.get hashid
-                |> Task.attempt ReceiveQueryResponse
+        payload =
+            Request.Board.queryGet hashid
+
+        pushEvent =
+            Push.init "doc" absintheChannelName
+                |> Push.withPayload payload
+                |> Push.onOk (pageExternalMsg << BoardLoaded)
+
+        ( socket2, phxCmd2 ) =
+            Phoenix.push connection.mapMessage pushEvent socket1
     in
-    Cmd.batch [ setSocketCmd, phxCmd, boardCmd ]
+    ( socket2, Cmd.batch [ phxCmd2, phxCmd1 ] )
 
 
 view : Session -> Model -> Html Msg
@@ -141,48 +137,36 @@ viewNewColumn model =
         ]
 
 
-update : Session -> Msg -> Model -> ( Model, Cmd Msg )
-update session msg model =
+update : Session -> Connection mainMsg -> (Msg -> mainMsg) -> Msg -> Model -> ( Model, Cmd Msg, Connection mainMsg, Cmd mainMsg )
+update session connection pageExternalMsg msg model =
     case msg of
-        SetSocket socket ->
-            ( { model | phxSocket = socket }, Cmd.none )
-
-        JoinedAbsintheControl _ ->
-            case model.board of
-                Just board ->
-                    let
-                        subscriptionDoc =
-                            "subscription { boardColumnEvent: boardColumnEvent(boardHashid: \"" ++ Data.Board.hashidToString board.hashid ++ "\") {action column { id name}}}"
-
-                        payload =
-                            Request.Column.subscribeColumnChange (Data.Board.hashidToString board.hashid)
-
-                        pushEvent =
-                            Push.init "doc" absintheChannelName
-                                |> Push.withPayload payload
-                                |> Push.onOk SubscribedToBoard
-
-                        ( socket, phxCmd ) =
-                            Phoenix.push PhoenixMsg pushEvent model.phxSocket
-                    in
-                    ( { model | phxSocket = socket }, phxCmd )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        ReceiveQueryResponse (Ok board) ->
+        BoardLoaded value ->
             let
                 newColumn =
                     model.newColumn
+
+                updatedModel =
+                    value
+                        |> Decode.decodeValue Request.Board.queryGetDecoder
+                        |> Result.map (\b -> { model | board = Just b, newColumn = { newColumn | boardId = b.id } })
+                        |> Result.withDefault model
+
+                ( updatedConnection, externalCmd ) =
+                    case updatedModel.board of
+                        Just board ->
+                            joinedAbsintheChannel connection pageExternalMsg board
+
+                        _ ->
+                            ( connection, Cmd.none )
             in
-            ( { model | board = Just board, newColumn = { newColumn | boardId = board.id } }, Cmd.none )
+            ( updatedModel, Cmd.none, updatedConnection, externalCmd )
 
         SetNewColumnName name ->
             let
                 newColumn =
                     model.newColumn
             in
-            ( { model | newColumn = { newColumn | name = name } }, Cmd.none )
+            ( { model | newColumn = { newColumn | name = name } }, Cmd.none, connection, Cmd.none )
 
         SubmitNewColumn ->
             let
@@ -192,47 +176,34 @@ update session msg model =
                         |> Request.Column.create model.newColumn
                         |> Task.attempt ReceiveNewColumnMutationResponse
             in
-            ( model, cmd )
+            ( model, cmd, connection, Cmd.none )
 
         ReceiveNewColumnMutationResponse (Ok { object, errors }) ->
             case ( model.board, object ) of
                 ( Just board, Just newColumn ) ->
-                    ( { model | board = Just { board | columns = newColumn :: board.columns } }, Cmd.none )
+                    ( { model | board = Just { board | columns = newColumn :: board.columns } }, Cmd.none, connection, Cmd.none )
 
                 ( Just board, Nothing ) ->
                     -- TODO: read errors
-                    ( model, Cmd.none )
+                    ( model, Cmd.none, connection, Cmd.none )
 
                 _ ->
-                    ( model, Cmd.none )
-
-        PhoenixMsg phxMsg ->
-            let
-                ( phxSocket, phxCmd ) =
-                    Phoenix.update PhoenixMsg phxMsg model.phxSocket
-            in
-            ( { model | phxSocket = phxSocket }, phxCmd )
+                    ( model, Cmd.none, connection, Cmd.none )
 
         SubscribedToBoard result ->
             case SubscriptionEvent.subscriptionId result of
                 Just subId ->
                     let
-                        subCan =
-                            subId
-                                |> Channel.init
-                                |> Channel.on "subscription:data" BoardChangeEvent
-
-                        -- msg: BoardChangeEvent { subscriptionId = "__absinthe__:doc:17682868", result = { data = { boardColumnEvent = { column = { name = "Doing", id = "d70c7200-2d12-43a4-b6a5-7666d150a09f" }, action = "created" } } } }
-                        ( phxSocket, phxCmd ) =
-                            Phoenix.subscribe PhoenixMsg subCan model.phxSocket
-
                         subscriptionEventType =
                             Dict.insert subId ColumnChangeEvent model.subscriptionEventType
+
+                        ( updateConnection, externalCmd ) =
+                            subscribedToColumnChange connection pageExternalMsg subId
                     in
-                    ( { model | phxSocket = phxSocket, subscriptionEventType = subscriptionEventType }, phxCmd )
+                    ( { model | subscriptionEventType = subscriptionEventType }, Cmd.none, updateConnection, externalCmd )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( model, Cmd.none, connection, Cmd.none )
 
         BoardChangeEvent event ->
             let
@@ -243,7 +214,7 @@ update session msg model =
             in
             case eventType of
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( model, Cmd.none, connection, Cmd.none )
 
                 Just ColumnChangeEvent ->
                     let
@@ -253,14 +224,45 @@ update session msg model =
                                 |> Result.map (\e -> updateColumnsInModel e model)
                                 |> Result.withDefault model
                     in
-                    ( updatedModel, Cmd.none )
+                    ( updatedModel, Cmd.none, connection, Cmd.none )
 
         _ ->
             let
                 _ =
                     Debug.log "msg" msg
             in
-            ( model, Cmd.none )
+            ( model, Cmd.none, connection, Cmd.none )
+
+
+joinedAbsintheChannel : Connection msg -> (Msg -> msg) -> BoardWithRelations -> ( Connection msg, Cmd msg )
+joinedAbsintheChannel connection pageExternalMsg board =
+    let
+        payload =
+            Request.Column.subscribeColumnChange (Data.Board.hashidToString board.hashid)
+
+        pushEvent =
+            Push.init "doc" absintheChannelName
+                |> Push.withPayload payload
+                |> Push.onOk (pageExternalMsg << SubscribedToBoard)
+
+        ( socket, phxCmd ) =
+            Phoenix.push connection.mapMessage pushEvent connection.socket
+    in
+    ( Connection.updateConnection socket connection, phxCmd )
+
+
+subscribedToColumnChange : Connection msg -> (Msg -> msg) -> String -> ( Connection msg, Cmd msg )
+subscribedToColumnChange connection pageExternalMsg subId =
+    let
+        subCan =
+            subId
+                |> Channel.init
+                |> Channel.on "subscription:data" (pageExternalMsg << BoardChangeEvent)
+
+        ( socket, phxCmd ) =
+            Phoenix.subscribe connection.mapMessage subCan connection.socket
+    in
+    ( Connection.updateConnection socket connection, phxCmd )
 
 
 updateColumnsInModel : ColumnEvent -> Model -> Model
@@ -283,4 +285,4 @@ updateColumnsInModel columnEvent model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Phoenix.listen PhoenixMsg model.phxSocket
+    Sub.none

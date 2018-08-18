@@ -1,4 +1,4 @@
-module Data.AuthToken exposing (AuthToken, build, decoder, encode, toHeader)
+module Data.AuthToken exposing (AuthToken, build, decoder, encode, toHeader, toString)
 
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -28,3 +28,8 @@ decoder =
 toHeader : AuthToken -> Http.Header
 toHeader (AuthToken token) =
     Http.header "Authorization" ("Bearer " ++ token)
+
+
+toString : AuthToken -> String
+toString (AuthToken token) =
+    token

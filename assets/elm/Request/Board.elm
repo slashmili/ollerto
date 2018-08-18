@@ -1,4 +1,4 @@
-module Request.Board exposing (BoardResponse, BoardsResponse, get, list)
+module Request.Board exposing (BoardResponse, BoardsResponse, get, list, queryGet, queryGetDecoder)
 
 -- Data
 -- Tools
@@ -11,6 +11,8 @@ import GraphQL.Client.Http as GraphQLClient
 import GraphQL.Request.Builder as Builder exposing (..)
 import GraphQL.Request.Builder.Arg as Arg
 import GraphQL.Request.Builder.Variable as Var
+import Json.Decode
+import Json.Encode
 import Request.Helper as Helper
 import Task exposing (Task)
 
@@ -29,6 +31,22 @@ get hashid maybeToken =
         |> queryDocument
         |> request { hashid = Data.Board.hashidToString hashid }
         |> Helper.sendQueryRequest maybeToken
+
+
+queryGet : Hashid -> Json.Encode.Value
+queryGet hashid =
+    boardQueryroot
+        |> queryDocument
+        |> request { hashid = Data.Board.hashidToString hashid }
+        |> Helper.queryPayload
+
+
+queryGetDecoder : Json.Decode.Decoder BoardWithRelations
+queryGetDecoder =
+    boardQueryroot
+        |> queryDocument
+        |> request { hashid = "" }
+        |> Helper.queryDecoder
 
 
 list : Maybe AuthToken -> Task GraphQLClient.Error (List Board)

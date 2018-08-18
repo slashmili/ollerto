@@ -20,8 +20,24 @@ defmodule OllertoWeb.UserSocket do
   #
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
-  def connect(_params, socket) do
-    {:ok, socket}
+  def connect(params, socket) do
+    with token when is_binary(token) <- params["token"],
+         {:ok, data} <- OllertoWeb.AccountsReslover.verify(token),
+         %{} = user <- get_user_data(data) do
+      socket =
+        Absinthe.Phoenix.Socket.put_options(socket,
+          context: %{current_user: user}
+        )
+
+      {:ok, socket}
+    else
+      _ ->
+        {:ok, socket}
+    end
+  end
+
+  defp get_user_data(%{id: id}) do
+    Ollerto.Accounts.get_user!(id)
   end
 
   # Socket id's are topics that allow you to identify all sockets for a given user:

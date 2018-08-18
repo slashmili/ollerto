@@ -11,7 +11,7 @@ defmodule OllertoWeb.Context do
 
   defp build_context(conn) do
     with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
-         {:ok, data} <- IO.inspect(OllertoWeb.AccountsReslover.verify(token)),
+         {:ok, data} <- OllertoWeb.AccountsReslover.verify(token),
          %{} = user <- get_user_data(data) do
       %{current_user: user}
     else
