@@ -257,7 +257,11 @@ updateColumnsInModel columnEvent model =
                     Nothing
 
                 Just board ->
-                    if columnEvent.action == "created" then
+                    let
+                        isAlreadyThere =
+                            List.any (\c -> c.id == columnEvent.column.id) board.columns
+                    in
+                    if not isAlreadyThere && columnEvent.action == "created" then
                         Just { board | columns = columnEvent.column :: board.columns }
 
                     else
