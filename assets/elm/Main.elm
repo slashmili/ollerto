@@ -17,6 +17,7 @@ import Page.Boards as Boards
 import Page.Home as Home
 import Page.Login as Login
 import Phoenix
+import Phoenix.Channel as Channel
 import Phoenix.Message as PhxMsg
 import Phoenix.Socket as Socket
 import Ports
@@ -61,12 +62,25 @@ init value location =
 
                 _ ->
                     ""
+
+        ( model, routeCmd ) =
+            setRoute (Route.fromLocation location)
+                { pageState = Loaded Blank
+                , session = { user = user }
+                , connection = { socket = Socket.init ("ws://localhost:4000/socket/websocket?token=" ++ token), mapMessage = PhoenixMsg }
+                }
+
+        channel =
+            Connection.absintheChannelName
+                |> Channel.init
+
+        ( socket, joinChannelCmd ) =
+            Phoenix.join model.connection.mapMessage channel model.connection.socket
+
+        connection =
+            Connection.updateConnection socket model.connection
     in
-    setRoute (Route.fromLocation location)
-        { pageState = Loaded Blank
-        , session = { user = user }
-        , connection = { socket = Socket.init ("ws://localhost:4000/socket/websocket?token=" ++ token), mapMessage = PhoenixMsg }
-        }
+    ( { model | connection = connection }, Cmd.batch [ routeCmd, joinChannelCmd ] )
 
 
 getPage : PageState -> Page

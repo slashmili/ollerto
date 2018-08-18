@@ -61,32 +61,21 @@ initialModel =
     }
 
 
-absintheChannelName =
-    "__absinthe__:control"
-
-
 init : Hashid -> Connection msg -> (Msg -> msg) -> ( Connection msg, Cmd msg )
 init hashid connection pageExternalMsg =
     let
-        channel =
-            absintheChannelName
-                |> Channel.init
-
-        ( socket1, phxCmd1 ) =
-            Phoenix.join connection.mapMessage channel connection.socket
-
         payload =
             Request.Board.queryGet hashid
 
         pushEvent =
-            Push.init "doc" absintheChannelName
+            Push.init "doc" Connection.absintheChannelName
                 |> Push.withPayload payload
                 |> Push.onOk (pageExternalMsg << BoardLoaded)
 
-        ( socket2, phxCmd2 ) =
-            Phoenix.push connection.mapMessage pushEvent socket1
+        ( socket, phxCmd ) =
+            Phoenix.push connection.mapMessage pushEvent connection.socket
     in
-    ( Connection.updateConnection socket2 connection, Cmd.batch [ phxCmd2, phxCmd1 ] )
+    ( Connection.updateConnection socket connection, phxCmd )
 
 
 view : Session -> Model -> Html Msg
@@ -235,7 +224,7 @@ joinedAbsintheChannel connection pageExternalMsg board =
             Request.Column.subscribeColumnChange (Data.Board.hashidToString board.hashid)
 
         pushEvent =
-            Push.init "doc" absintheChannelName
+            Push.init "doc" Connection.absintheChannelName
                 |> Push.withPayload payload
                 |> Push.onOk (pageExternalMsg << SubscribedToBoard)
 
