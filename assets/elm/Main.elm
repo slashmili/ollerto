@@ -112,10 +112,10 @@ setRoute maybeRoute model =
 
         Just (Route.Board hashid) ->
             let
-                ( socket, cmd ) =
+                ( connection, cmd ) =
                     Board.init hashid model.connection (\m -> BoardMsg m)
             in
-            ( { model | connection = Connection.updateConnection socket model.connection, pageState = TransitioningFrom (Board Board.initialModel) }, cmd )
+            ( { model | connection = connection, pageState = TransitioningFrom (Board Board.initialModel) }, cmd )
 
         _ ->
             ( model, Cmd.none )

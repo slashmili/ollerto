@@ -12,7 +12,6 @@ import Json.Decode as Decode exposing (Value)
 import Json.Encode
 import Phoenix
 import Phoenix.Channel as Channel
-import Phoenix.Message as PhxMsg
 import Phoenix.Push as Push
 import Phoenix.Socket as Socket
 import Request.Board
@@ -66,18 +65,13 @@ absintheChannelName =
     "__absinthe__:control"
 
 
-initSocket =
-    Socket.init "ws://localhost:4000/socket/websocket"
-
-
-init : Hashid -> Connection msg -> (Msg -> msg) -> ( Socket.Socket msg, Cmd msg )
+init : Hashid -> Connection msg -> (Msg -> msg) -> ( Connection msg, Cmd msg )
 init hashid connection pageExternalMsg =
     let
         channel =
             absintheChannelName
                 |> Channel.init
 
-        --|> Channel.onJoin (pageExternalMsg << JoinedAbsintheControl)
         ( socket1, phxCmd1 ) =
             Phoenix.join connection.mapMessage channel connection.socket
 
@@ -92,7 +86,7 @@ init hashid connection pageExternalMsg =
         ( socket2, phxCmd2 ) =
             Phoenix.push connection.mapMessage pushEvent socket1
     in
-    ( socket2, Cmd.batch [ phxCmd2, phxCmd1 ] )
+    ( Connection.updateConnection socket2 connection, Cmd.batch [ phxCmd2, phxCmd1 ] )
 
 
 view : Session -> Model -> Html Msg
