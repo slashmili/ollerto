@@ -18,6 +18,7 @@ import Phoenix.Socket as Socket
 import Request.Board
 import Request.Column
 import Request.SubscriptionEvent as SubscriptionEvent
+import Style.Board
 import Task
 
 
@@ -83,27 +84,39 @@ view : Session -> Model -> Html Msg
 view session model =
     case model.board of
         Just board ->
-            div []
-                [ h1 [] [ text board.name ]
-                , viewColumns model
-                , viewNewColumn model
+            div [ css [ Style.Board.boardWrapper ] ]
+                [ div [ css [ Style.Board.boardMainContent ] ]
+                    [ header [ css [ Style.Board.boardHeader ] ]
+                        [ span [ css [ Style.Board.boardHeaderName ] ] [ text board.name ]
+                        ]
+                    , div [ css [ Style.Board.boardCanvas ] ]
+                        [ div [ css [ Style.Board.columns ] ]
+                            [ viewColumns board
+                            , viewNewColumn model
+                            ]
+                        ]
+                    ]
                 ]
 
-        -- TODO: show lists form
         _ ->
             text "loading ..."
 
 
-viewColumns : Model -> Html Msg
-viewColumns model =
-    case model.board of
-        Just board ->
-            div []
-                [ ul [] (List.map (\c -> li [] [ text c.name ]) board.columns)
-                ]
-
-        _ ->
-            text ""
+viewColumns : BoardWithRelations -> Html Msg
+viewColumns board =
+    div []
+        (List.map
+            (\c ->
+                div [ css [ Style.Board.columnWrapper ] ]
+                    [ div [ css [ Style.Board.columnStyle ] ]
+                        [ div [ css [ Style.Board.columnHeaderStyle ] ]
+                            [ span [ css [ Style.Board.columnHeaderNameStyle ] ] [ text c.name ]
+                            ]
+                        ]
+                    ]
+            )
+            board.columns
+        )
 
 
 viewNewColumn : Model -> Html Msg

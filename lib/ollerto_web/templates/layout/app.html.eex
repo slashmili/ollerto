@@ -8,6 +8,11 @@
     <meta name="author" content="">
 
     <title>Hello Ollerto!</title>
+    <style>
+      body {
+        font-family: Helvetica Neue,Arial,Helvetica,sans-serif;
+      }
+    </style>
   </head>
 
   <body>

@@ -19,7 +19,7 @@ import "phoenix_html"
 // paths "./socket" or full ones "web/static/js/socket".
 
 // import socket from "./socket"
-require('ace-css/css/ace.css');
+//require('ace-css/css/ace.css');
 require('font-awesome/css/font-awesome.css');
 import css from '../css/app.css';
 var Elm = require('../elm/Main.elm');
