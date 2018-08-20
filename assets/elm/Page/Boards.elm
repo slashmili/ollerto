@@ -8,7 +8,7 @@ module Page.Boards exposing (Model, Msg, init, initialModel, update, view)
 import Data.Board exposing (Board)
 import Data.Session exposing (Session)
 import GraphQL.Client.Http exposing (Error(..))
-import Html exposing (..)
+import Html.Styled as HtmlStyled exposing (..)
 import Request.Board
 import Route
 import Task
@@ -49,7 +49,7 @@ viewUserBoards : Model -> Html Msg
 viewUserBoards model =
     let
         ahref =
-            \board -> a [ Route.href (Route.Board board.hashid) ] [ text board.name ]
+            \board -> a [ Route.styledHref (Route.Board board.hashid) ] [ text board.name ]
     in
     div []
         [ text "Your boards: "

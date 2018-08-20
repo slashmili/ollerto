@@ -5,9 +5,10 @@ import Data.Column exposing (ColumnEvent)
 import Data.Connection as Connection exposing (Connection)
 import Data.Session exposing (Session)
 import Dict exposing (Dict)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html
+import Html.Styled as HtmlStyled exposing (..)
+import Html.Styled.Attributes exposing (..)
+import Html.Styled.Events exposing (onClick, onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode
 import Phoenix
@@ -109,7 +110,7 @@ viewNewColumn : Model -> Html Msg
 viewNewColumn model =
     div []
         [ text "New column"
-        , Html.form [ onSubmit SubmitNewColumn ]
+        , HtmlStyled.form [ onSubmit SubmitNewColumn ]
             [ input
                 [ onInput SetNewColumnName
                 , placeholder "name"

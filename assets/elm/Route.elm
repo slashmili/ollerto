@@ -1,4 +1,4 @@
-module Route exposing (Route(..), fromLocation, href, modifyUrl)
+module Route exposing (Route(..), fromLocation, href, modifyUrl, styledHref)
 
 -- Data
 -- External
@@ -7,6 +7,8 @@ import Data.Board as Board exposing (Board)
 import Data.User as User exposing (Username)
 import Html exposing (Attribute)
 import Html.Attributes as Attr
+import Html.Styled
+import Html.Styled.Attributes as StyledAttr
 import Navigation exposing (Location)
 import UrlParser as Url exposing ((</>), Parser, oneOf, parseHash, s, string)
 
@@ -55,6 +57,11 @@ routeToString page =
 href : Route -> Attribute msg
 href route =
     Attr.href (routeToString route)
+
+
+styledHref : Route -> Html.Styled.Attribute msg
+styledHref route =
+    StyledAttr.href (routeToString route)
 
 
 modifyUrl : Route -> Cmd msg

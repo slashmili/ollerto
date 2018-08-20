@@ -8,9 +8,10 @@ module Page.Login exposing (Model, Msg, initialModel, update, view)
 import Data.Session exposing (Session)
 import Data.User as User exposing (User)
 import GraphQL.Client.Http as GraphQLClient exposing (Error(..))
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html
+import Html.Styled as HtmlStyled exposing (..)
+import Html.Styled.Attributes exposing (..)
+import Html.Styled.Events exposing (onClick, onInput, onSubmit)
 import Request.User
 import Route
 import Task exposing (Task)
@@ -37,7 +38,7 @@ view session model =
     div []
         [ text "Login page"
         , div [] (List.map (\e -> text e) model.errors)
-        , Html.form [ onSubmit SubmitForm ]
+        , HtmlStyled.form [ onSubmit SubmitForm ]
             [ input
                 [ onInput SetEmail
                 , placeholder "Email"

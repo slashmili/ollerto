@@ -1,7 +1,8 @@
 module Page.Home exposing (Model, Msg, initialModel, view)
 
 import Data.Session exposing (Session)
-import Html exposing (..)
+import Html
+import Html.Styled exposing (..)
 import Route exposing (Route)
 
 
@@ -23,5 +24,5 @@ view session model =
     div []
         [ text "home page"
         , div []
-            [ a [ Route.href Route.Login ] [ text "Login" ] ]
+            [ a [ Route.styledHref Route.Login ] [ text "Login" ] ]
         ]

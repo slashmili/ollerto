@@ -5,11 +5,13 @@ module Main exposing (..)
 -- Tools
 -- External
 
+import Css
 import Data.AuthToken as AuthToken
 import Data.Connection as Connection exposing (Connection)
 import Data.Session exposing (Session)
 import Data.User as User exposing (User, Username)
-import Html exposing (..)
+import Html
+import Html.Styled as HtmlStyled exposing (..)
 import Json.Decode as Decode exposing (Value)
 import Navigation exposing (Location)
 import Page.Board as Board
@@ -168,23 +170,23 @@ viewPage : Session -> Bool -> Page -> Html Msg
 viewPage session isLoading page =
     case page of
         NotFound ->
-            Html.text "404 !"
+            text "404 !"
 
         Login subModel ->
             Login.view session subModel
-                |> Html.map LoginMsg
+                |> HtmlStyled.map LoginMsg
 
         Home subModel ->
             Home.view session subModel
-                |> Html.map HomeMsg
+                |> HtmlStyled.map HomeMsg
 
         Boards subModel ->
             Boards.view session subModel
-                |> Html.map BoardsMsg
+                |> HtmlStyled.map BoardsMsg
 
         Board subModel ->
             Board.view session subModel
-                |> Html.map BoardMsg
+                |> HtmlStyled.map BoardMsg
 
         _ ->
             text ("Page " ++ toString page ++ " ...")
@@ -297,7 +299,7 @@ main : Program Value Model Msg
 main =
     Navigation.programWithFlags (Route.fromLocation >> SetRoute)
         { init = init
-        , view = view
+        , view = view >> HtmlStyled.toUnstyled
         , update = update
         , subscriptions = subscriptions
         }
