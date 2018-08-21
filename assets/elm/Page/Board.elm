@@ -8,9 +8,10 @@ import Dict exposing (Dict)
 import Html
 import Html.Styled as HtmlStyled exposing (..)
 import Html.Styled.Attributes exposing (..)
-import Html.Styled.Events exposing (onClick, onInput, onSubmit)
+import Html.Styled.Events exposing (on, onClick, onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode
+import Mouse exposing (Position)
 import Phoenix
 import Phoenix.Channel as Channel
 import Phoenix.Push as Push
@@ -18,6 +19,7 @@ import Phoenix.Socket as Socket
 import Request.Board
 import Request.Column
 import Request.SubscriptionEvent as SubscriptionEvent
+import Style
 import Style.Board
 import Task
 
@@ -30,6 +32,9 @@ type Msg
     | SubscribedToBoard Value
     | BoardLoaded Value
     | ReceiveNewColumnMutationResponse Request.Column.ColumnMutationResponse
+    | DragColumnAt Position
+    | DragColumnEnd Position
+    | DragColumnStart Data.Column.Column Position
 
 
 type EventType
@@ -43,10 +48,18 @@ type alias ColumnModelForm =
     }
 
 
+type alias DragColumn =
+    { column : Data.Column.Column
+    , startPosition : Position
+    , currentPosition : Position
+    }
+
+
 type alias Model =
     { board : Maybe BoardWithRelations
     , newColumn : ColumnModelForm
     , subscriptionEventType : Dict String EventType
+    , dragColumn : Maybe DragColumn
     }
 
 
@@ -60,6 +73,7 @@ initialModel =
     { board = Nothing
     , newColumn = { name = "", errors = [], boardId = "" }
     , subscriptionEventType = Dict.empty
+    , dragColumn = Nothing
     }
 
 
@@ -91,7 +105,7 @@ view session model =
                         ]
                     , div [ css [ Style.Board.boardCanvas ] ]
                         [ div [ css [ Style.Board.columns ] ]
-                            [ viewColumns board
+                            [ viewColumns board model
                             , viewNewColumn model
                             ]
                         ]
@@ -102,21 +116,53 @@ view session model =
             text "loading ..."
 
 
-viewColumns : BoardWithRelations -> Html Msg
-viewColumns board =
+viewColumns : BoardWithRelations -> Model -> Html Msg
+viewColumns board model =
     div []
-        (List.map
-            (\c ->
-                div [ css [ Style.Board.columnWrapper ] ]
-                    [ div [ css [ Style.Board.columnStyle ] ]
-                        [ div [ css [ Style.Board.columnHeaderStyle ] ]
-                            [ span [ css [ Style.Board.columnHeaderNameStyle ] ] [ text c.name ]
-                            ]
+        (List.indexedMap (viewColumn model.dragColumn) board.columns)
+
+
+viewColumn : Maybe DragColumn -> Int -> Data.Column.Column -> Html Msg
+viewColumn maybeDragingColumn idx columnModel =
+    let
+        moveStyle =
+            maybeDragingColumn
+                |> Maybe.andThen
+                    (\{ column, startPosition, currentPosition } ->
+                        if column == columnModel then
+                            Just (Style.Board.movingColumn startPosition currentPosition)
+
+                        else
+                            Nothing
+                    )
+                |> Maybe.withDefault Style.empty
+    in
+    div [ css [ Style.batch Style.Board.columnWrapper moveStyle ] ]
+        [ div [ css [ Style.Board.columnStyle ] ]
+            [ div [ css [ Style.Board.columnHeaderStyle ] ]
+                [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DragColumnStart columnModel) ] [ text columnModel.name ]
+                ]
+            , div [ css [ Style.Board.cards ] ] viewCards
+            ]
+        ]
+
+
+onMouseDown : (Position -> msg) -> Attribute msg
+onMouseDown msg =
+    on "mousedown" (Decode.map msg Mouse.position)
+
+
+viewCards : List (Html Msg)
+viewCards =
+    List.range 1 10
+        |> List.map
+            (\i ->
+                a [ css [ Style.Board.card ] ]
+                    [ div [ css [ Style.Board.cardDetails ] ]
+                        [ text ("Card #" ++ toString i)
                         ]
                     ]
             )
-            board.columns
-        )
 
 
 viewNewColumn : Model -> Html Msg
@@ -137,6 +183,21 @@ viewNewColumn model =
 update : Session -> Connection mainMsg -> (Msg -> mainMsg) -> Msg -> Model -> ( Model, Cmd Msg, Connection mainMsg, Cmd mainMsg )
 update session connection pageExternalMsg msg model =
     case msg of
+        DragColumnStart column pos ->
+            ( { model | dragColumn = Just <| DragColumn column pos pos }, Cmd.none, connection, Cmd.none )
+
+        DragColumnAt pos ->
+            ( { model | dragColumn = Maybe.map (\{ column, startPosition } -> DragColumn column startPosition pos) model.dragColumn }, Cmd.none, connection, Cmd.none )
+
+        DragColumnEnd pos ->
+            --case model.drag of
+            --    just {column, startX, currentX} ->
+            let
+                _ =
+                    Debug.log "pos" msg
+            in
+            ( { model | dragColumn = Nothing }, Cmd.none, connection, Cmd.none )
+
         BoardLoaded value ->
             let
                 newColumn =
@@ -286,4 +347,9 @@ updateColumnsInModel columnEvent model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    case model.dragColumn of
+        Nothing ->
+            Sub.batch []
+
+        Just _ ->
+            Sub.batch [ Mouse.moves DragColumnAt, Mouse.ups DragColumnEnd ]

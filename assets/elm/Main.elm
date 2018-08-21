@@ -283,7 +283,14 @@ subscriptions model =
 
 pageSubscriptions : Page -> Sub Msg
 pageSubscriptions page =
-    Sub.none
+    case page of
+        Board model ->
+            model
+                |> Board.subscriptions
+                |> Sub.map BoardMsg
+
+        _ ->
+            Sub.none
 
 
 sessionChange : Sub (Maybe User)

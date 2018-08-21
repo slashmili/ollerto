@@ -88,6 +88,28 @@ columnWrapper =
         ]
 
 
+movingColumn : { a | x : Int, y : Int } -> { b | x : Int, y : Int } -> Style
+movingColumn startPosition currentPosition =
+    let
+        _ =
+            Debug.log "movingColumn" (currentPosition.x - startPosition.x)
+    in
+    -- complected version
+    -- Css.batch
+    -- [ width (px 272)
+    -- , position absolute
+    -- , zIndex (int 1000)
+    -- , left (px (toFloat currentPosition.x))
+    -- , top (px (toFloat currentPosition.y))
+    -- ]
+    -- simple version
+    Css.batch
+        [ property "transform" ("translateX( " ++ toString (currentPosition.x - startPosition.x) ++ "px)  translateZ(20px) rotate(3deg)")
+        , property "box-shadow" "0 3px 6px rgba(0,0,0,0.24)"
+        , property "willChange" "transform"
+        ]
+
+
 columnStyle : Style
 columnStyle =
     Css.batch
@@ -120,4 +142,45 @@ columnHeaderNameStyle =
         [ lineHeight (px 24)
         , margin3 (px 0) (px 0) (px 8)
         , fontWeight (int 700)
+        ]
+
+
+cards : Style
+cards =
+    Css.batch
+        [ property "flex" "1 1 auto"
+        , marginBottom (px 0)
+        , overflowY auto
+        , overflowX hidden
+        , margin2 (px 0) (px 4)
+        , padding2 (px 0) (px 4)
+        , zIndex (int 1)
+        , minHeight (px 0)
+        ]
+
+
+card : Style
+card =
+    Css.batch
+        [ backgroundColor (hex "fff")
+        , borderRadius (px 3)
+        , boxShadow4 (px 0) (px 1) (px 0) (hex "ccc")
+        , cursor pointer
+        , display block
+        , marginBottom (px 8)
+        , maxWidth (px 300)
+        , minHeight (px 20)
+        , position relative
+        , textDecoration none
+        , zIndex (int 0)
+        ]
+
+
+cardDetails : Style
+cardDetails =
+    Css.batch
+        [ overflow hidden
+        , padding3 (px 6) (px 8) (px 2)
+        , position relative
+        , zIndex (int 10)
         ]
