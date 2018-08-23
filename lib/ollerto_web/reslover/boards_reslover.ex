@@ -37,4 +37,18 @@ defmodule OllertoWeb.BoardsReslover do
       {:ok, %{column: column}}
     end
   end
+
+  def update_column(_, %{input: params}, _) do
+    # TODO: check if user owns the board
+    board = Boards.get_board!(params.board_id)
+    column = Boards.get_column!(params.id)
+
+    with {:ok, column} <- Boards.update_column(column, params) do
+      Absinthe.Subscription.publish(OllertoWeb.Endpoint, %{action: :updated, column: column},
+        board_column_event: board.hashid
+      )
+
+      {:ok, %{column: column}}
+    end
+  end
 end

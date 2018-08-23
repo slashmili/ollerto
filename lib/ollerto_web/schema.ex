@@ -41,6 +41,13 @@ defmodule OllertoWeb.Schema do
       middleware AuthorizeMiddleware
       resolve &BoardsReslover.create_column/3
     end
+
+    field :update_column_position, :update_column_result do
+      description "Updates column's position for authorized user"
+      arg :input, non_null(:update_column_position_input)
+      middleware AuthorizeMiddleware
+      resolve &BoardsReslover.update_column/3
+    end
   end
 
   query do

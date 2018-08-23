@@ -1,4 +1,4 @@
-module Request.Column exposing (ColumnMutationResponse, ColumnResponse, create, subscribeColumnChange, subscribeColumnChangeDecoder)
+module Request.Column exposing (ColumnMutationResponse, ColumnResponse, create, subscribeColumnChange, subscribeColumnChangeDecoder, updatePosition)
 
 -- Data
 -- Tools
@@ -29,6 +29,14 @@ create { name, boardId } maybeToken =
     createColumnMutationRoot
         |> mutationDocument
         |> request { input = { name = name, boardId = boardId } }
+        |> Helper.sendMutationRequest maybeToken
+
+
+updatePosition : Column -> String -> Maybe AuthToken -> Task GraphQLClient.Error (Helper.MutationResult Column)
+updatePosition column boardId maybeToken =
+    updateColumnMutationRoot
+        |> mutationDocument
+        |> request { input = { id = column.id, position = column.position, boardId = boardId } }
         |> Helper.sendMutationRequest maybeToken
 
 
@@ -82,3 +90,30 @@ createColumnChangeSubscriptionroot =
     in
     extract
         (field "boardColumnEvent" [ ( "boardHashid", Arg.variable hashid ) ] Data.Column.columnEventObject)
+
+
+updateColumnMutationRoot : ValueSpec NonNull ObjectType (Helper.MutationResult Column) { b | input : { a | id : String, position : Int, boardId : String } }
+updateColumnMutationRoot =
+    let
+        result =
+            Builder.object Helper.MutationResult
+                |> with (aliasAs "object" (field "column" [] (nullable Data.Column.object)))
+                |> with (field "errors" [] (list Helper.errorObject))
+    in
+    extract
+        (field "updateColumnPosition"
+            [ ( "input", Arg.variable updateColumnInput ) ]
+            result
+        )
+
+
+updateColumnInput : Var.Variable { b | input : { a | id : String, position : Int, boardId : String } }
+updateColumnInput =
+    Var.required "input"
+        .input
+        (Var.object "UpdateColumnPositionInput"
+            [ Var.field "id" .id Var.string
+            , Var.field "position" .position Var.int
+            , Var.field "board_id" .boardId Var.string
+            ]
+        )

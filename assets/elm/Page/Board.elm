@@ -32,6 +32,7 @@ type Msg
     | SubscribedToBoard Value
     | BoardLoaded Value
     | ReceiveNewColumnMutationResponse Request.Column.ColumnMutationResponse
+    | ReceiveUpdateColumnPositionMutationResponse Request.Column.ColumnMutationResponse
     | DragColumnAt Position
     | DragColumnEnd Position
     | DragColumnStart Data.Column.Column Position
@@ -217,7 +218,32 @@ update session connection pageExternalMsg msg model =
             ( { model | dragColumn = Maybe.map (\{ column, startPosition } -> DragColumn column startPosition pos) model.dragColumn }, Cmd.none, connection, Cmd.none )
 
         DragColumnEnd pos ->
-            ( { model | dragColumn = Nothing }, Cmd.none, connection, Cmd.none )
+            let
+                position =
+                    (pos.x // 272) + 1
+
+                boardId =
+                    model.board |> Maybe.map .id |> Maybe.withDefault ""
+
+                cmd =
+                    case model.dragColumn of
+                        Just dragColumn ->
+                            let
+                                column =
+                                    dragColumn.column
+
+                                newColumn =
+                                    { column | position = position }
+                            in
+                            session.user
+                                |> Maybe.map .token
+                                |> Request.Column.updatePosition newColumn boardId
+                                |> Task.attempt ReceiveUpdateColumnPositionMutationResponse
+
+                        Nothing ->
+                            Cmd.none
+            in
+            ( { model | dragColumn = Nothing }, cmd, connection, Cmd.none )
 
         BoardLoaded value ->
             let
@@ -262,6 +288,29 @@ update session connection pageExternalMsg msg model =
                         |> Task.attempt ReceiveNewColumnMutationResponse
             in
             ( { model | newColumn = resetNewColumn }, cmd, connection, Cmd.none )
+
+        ReceiveUpdateColumnPositionMutationResponse (Ok { object, errors }) ->
+            case ( model.board, object ) of
+                ( Just board, Just updatedColumn ) ->
+                    let
+                        columns =
+                            List.map
+                                (\c ->
+                                    if c.id == updatedColumn.id then
+                                        updatedColumn
+
+                                    else
+                                        c
+                                )
+                                board.columns
+
+                        updatedBoard =
+                            { board | columns = columns }
+                    in
+                    ( { model | board = Just <| sortBoardColumns updatedBoard }, Cmd.none, connection, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none, connection, Cmd.none )
 
         ReceiveNewColumnMutationResponse (Ok { object, errors }) ->
             case ( model.board, object ) of

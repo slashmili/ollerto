@@ -37,4 +37,15 @@ defmodule OllertoWeb.Schema.BoardTypes do
     field :column, :column
     field :errors, list_of(:input_error)
   end
+
+  input_object :update_column_position_input do
+    field :id, non_null(:id)
+    field :board_id, non_null(:id)
+    field :position, non_null(:integer)
+  end
+
+  object :update_column_result do
+    field :column, :column
+    field :errors, list_of(:input_error)
+  end
 end
