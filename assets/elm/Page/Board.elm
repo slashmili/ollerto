@@ -199,6 +199,7 @@ viewNewColumn model =
             [ input
                 [ onInput SetNewColumnName
                 , placeholder "name"
+                , value model.newColumn.name
                 ]
                 []
             ]
@@ -226,7 +227,7 @@ update session connection pageExternalMsg msg model =
                 updatedModel =
                     value
                         |> Decode.decodeValue Request.Board.queryGetDecoder
-                        |> Result.map (\b -> { model | board = Just b, newColumn = { newColumn | boardId = b.id } })
+                        |> Result.map (\b -> { model | board = Just <| sortBoardColumns b, newColumn = { newColumn | boardId = b.id } })
                         |> Result.withDefault model
 
                 ( updatedConnection, externalCmd ) =
@@ -248,18 +249,28 @@ update session connection pageExternalMsg msg model =
 
         SubmitNewColumn ->
             let
+                newColumn =
+                    model.newColumn
+
+                resetNewColumn =
+                    { newColumn | name = "", errors = [] }
+
                 cmd =
                     session.user
                         |> Maybe.map .token
-                        |> Request.Column.create model.newColumn
+                        |> Request.Column.create newColumn
                         |> Task.attempt ReceiveNewColumnMutationResponse
             in
-            ( model, cmd, connection, Cmd.none )
+            ( { model | newColumn = resetNewColumn }, cmd, connection, Cmd.none )
 
         ReceiveNewColumnMutationResponse (Ok { object, errors }) ->
             case ( model.board, object ) of
                 ( Just board, Just newColumn ) ->
-                    ( { model | board = Just { board | columns = newColumn :: board.columns } }, Cmd.none, connection, Cmd.none )
+                    let
+                        updatedBoard =
+                            { board | columns = newColumn :: board.columns }
+                    in
+                    ( { model | board = Just <| sortBoardColumns updatedBoard }, Cmd.none, connection, Cmd.none )
 
                 ( Just board, Nothing ) ->
                     -- TODO: read errors
@@ -357,12 +368,25 @@ updateColumnsInModel columnEvent model =
                             List.any (\c -> c.id == columnEvent.column.id) board.columns
                     in
                     if not isAlreadyThere && columnEvent.action == "created" then
-                        Just { board | columns = columnEvent.column :: board.columns }
+                        let
+                            updatedBoard =
+                                { board | columns = columnEvent.column :: board.columns }
+                        in
+                        Just <| sortBoardColumns updatedBoard
 
                     else
                         Just board
     in
     { model | board = board }
+
+
+sortBoardColumns : BoardWithRelations -> BoardWithRelations
+sortBoardColumns board =
+    let
+        sortedColumns =
+            List.sortBy .position board.columns
+    in
+    { board | columns = sortedColumns }
 
 
 subscriptions : Model -> Sub Msg

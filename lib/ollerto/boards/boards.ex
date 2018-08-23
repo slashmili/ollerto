@@ -143,7 +143,11 @@ defmodule Ollerto.Boards do
   end
 
   def list_columns(board: board) do
-    Repo.all(from(c in Column, where: c.board_id == ^board.id))
+    list_columns(board_id: board.id)
+  end
+
+  def list_columns(board_id: board_id) do
+    Repo.all(from(c in Column, where: c.board_id == ^board_id, order_by: [:position]))
   end
 
   @doc """
@@ -225,5 +229,23 @@ defmodule Ollerto.Boards do
   """
   def change_column(%Column{} = column) do
     Column.changeset(column, %{})
+  end
+
+  @doc """
+  Gets the highest position value in columns for given board
+  """
+  def get_latest_column_position(board) do
+    q =
+      from c in Column,
+        select: [c.position],
+        where: c.board_id == ^board.id,
+        limit: 1,
+        order_by: [desc: :position]
+
+    q
+    |> Repo.all()
+    |> List.first()
+    |> Nily.map(&List.first/1)
+    |> Nily.withDefault(0)
   end
 end
