@@ -150,7 +150,7 @@ viewColumn maybeDragingColumn idx columnModel =
                     False
 
                 Just dragColumn ->
-                    idx == (dragColumn.currentPosition.x // 272)
+                    idx == (dragColumn.currentPosition.x // 272) + 1
     in
     if shouldShowTheShadow then
         span []
