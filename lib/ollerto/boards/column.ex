@@ -6,7 +6,7 @@ defmodule Ollerto.Boards.Column do
   @foreign_key_type :binary_id
   schema "columns" do
     field :name, :string
-    field :order, :integer, default: 0
+    field :position, :integer, default: 0
     field :board_id, :binary_id
 
     timestamps()
@@ -15,7 +15,7 @@ defmodule Ollerto.Boards.Column do
   @doc false
   def changeset(column, attrs) do
     column
-    |> cast(attrs, [:name, :order, :board_id])
-    |> validate_required([:name, :order, :board_id])
+    |> cast(attrs, [:name, :position, :board_id])
+    |> validate_required([:name, :position, :board_id])
   end
 end
