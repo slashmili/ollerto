@@ -1,4 +1,4 @@
-module Style.Board exposing (..)
+module Style.Board exposing (boardCanvas, boardHeader, boardHeaderName, boardMainContent, boardWrapper, card, cardDetails, cards, columnHeaderNameStyle, columnHeaderStyle, columnShadowWrapper, columnStyle, columnWrapper, columns, movingColumn)
 
 import Css exposing (..)
 
@@ -88,25 +88,23 @@ columnWrapper =
         ]
 
 
+columnShadowWrapper : Style
+columnShadowWrapper =
+    Css.batch
+        [ backgroundColor (hex "c0c5ce")
+        , maxHeight (px 200)
+        , height (px 200)
+        ]
+
+
 movingColumn : { a | x : Int, y : Int } -> { b | x : Int, y : Int } -> Style
 movingColumn startPosition currentPosition =
-    let
-        _ =
-            Debug.log "movingColumn" (currentPosition.x - startPosition.x)
-    in
-    -- complected version
-    -- Css.batch
-    -- [ width (px 272)
-    -- , position absolute
-    -- , zIndex (int 1000)
-    -- , left (px (toFloat currentPosition.x))
-    -- , top (px (toFloat currentPosition.y))
-    -- ]
-    -- simple version
     Css.batch
-        [ property "transform" ("translateX( " ++ toString (currentPosition.x - startPosition.x) ++ "px)  translateZ(20px) rotate(3deg)")
-        , property "box-shadow" "0 3px 6px rgba(0,0,0,0.24)"
-        , property "willChange" "transform"
+        [ position absolute
+        , zIndex (int 1000)
+        , left (px (toFloat currentPosition.x - 50))
+        , top (px (toFloat currentPosition.y - 50))
+        , property "transform" "rotate(3deg)"
         ]
 
 

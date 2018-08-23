@@ -125,18 +125,44 @@ viewColumns board model =
 viewColumn : Maybe DragColumn -> Int -> Data.Column.Column -> Html Msg
 viewColumn maybeDragingColumn idx columnModel =
     let
-        moveStyle =
+        maybeCurrentColumnDraggingColumn =
             maybeDragingColumn
                 |> Maybe.andThen
                     (\{ column, startPosition, currentPosition } ->
                         if column == columnModel then
-                            Just (Style.Board.movingColumn startPosition currentPosition)
+                            Just (DragColumn column startPosition currentPosition)
 
                         else
                             Nothing
                     )
+
+        moveStyle =
+            maybeCurrentColumnDraggingColumn
+                |> Maybe.map
+                    (\dragColumn ->
+                        Style.Board.movingColumn dragColumn.startPosition dragColumn.currentPosition
+                    )
                 |> Maybe.withDefault Style.empty
+
+        shouldShowTheShadow =
+            case maybeDragingColumn of
+                Nothing ->
+                    False
+
+                Just dragColumn ->
+                    idx == (dragColumn.currentPosition.x // 272)
     in
+    if shouldShowTheShadow then
+        span []
+            [ div [ css [ Style.batch Style.Board.columnWrapper Style.Board.columnShadowWrapper ] ] []
+            , viewColumnWrapper columnModel moveStyle
+            ]
+
+    else
+        viewColumnWrapper columnModel moveStyle
+
+
+viewColumnWrapper columnModel moveStyle =
     div [ css [ Style.batch Style.Board.columnWrapper moveStyle ] ]
         [ div [ css [ Style.Board.columnStyle ] ]
             [ div [ css [ Style.Board.columnHeaderStyle ] ]
@@ -190,12 +216,6 @@ update session connection pageExternalMsg msg model =
             ( { model | dragColumn = Maybe.map (\{ column, startPosition } -> DragColumn column startPosition pos) model.dragColumn }, Cmd.none, connection, Cmd.none )
 
         DragColumnEnd pos ->
-            --case model.drag of
-            --    just {column, startX, currentX} ->
-            let
-                _ =
-                    Debug.log "pos" msg
-            in
             ( { model | dragColumn = Nothing }, Cmd.none, connection, Cmd.none )
 
         BoardLoaded value ->
