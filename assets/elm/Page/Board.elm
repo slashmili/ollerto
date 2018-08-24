@@ -230,68 +230,15 @@ update session connection pageExternalMsg msg model =
         DragColumnAt pos ->
             ( { model | dragColumn = Maybe.map (\{ column, startPosition } -> DragColumn column startPosition pos) model.dragColumn }, Cmd.none, connection, Cmd.none )
 
-        DragColumnEnd pos ->
+        DragColumnEnd droppedPosition ->
             case ( model.board, model.dragColumn ) of
                 ( Just board, Just dragColumn ) ->
                     let
-                        columnIndex =
-                            pos.x // 272
-
-                        isDraggingFromLeft =
-                            dragColumn.startPosition.x < pos.x
-
-                        ( beforeIndex, afterIndex ) =
-                            if isDraggingFromLeft then
-                                ( columnIndex, columnIndex + 1 )
-
-                            else
-                                ( columnIndex - 1, columnIndex )
-
-                        maybeOneBefore =
-                            getAt board.columns beforeIndex
-
-                        maybeOneAfter =
-                            getAt board.columns afterIndex
-
-                        maybeNewPosition =
-                            case ( maybeOneBefore, maybeOneAfter ) of
-                                ( Nothing, Nothing ) ->
-                                    Nothing
-
-                                ( Just oneBefore, Just oneAfter ) ->
-                                    Just (oneBefore.position + (oneAfter.position - oneBefore.position) / 2)
-
-                                ( Just oneBefore, Nothing ) ->
-                                    if oneBefore.id == dragColumn.column.id then
-                                        let
-                                            lastColumnPosition =
-                                                getAt board.columns (List.length board.columns - 1)
-                                                    |> Maybe.map .position
-                                                    |> Maybe.withDefault 1024.0
-                                        in
-                                        Just (lastColumnPosition + lastColumnPosition / 2)
-
-                                    else
-                                        Just (oneBefore.position + oneBefore.position / 2)
-
-                                ( Nothing, Just oneAfter ) ->
-                                    if oneAfter.id == dragColumn.column.id then
-                                        let
-                                            firstColumnPosition =
-                                                getAt board.columns 0
-                                                    |> Maybe.map .position
-                                                    |> Maybe.withDefault 0.9999999
-                                        in
-                                        Just (firstColumnPosition - firstColumnPosition / 2)
-
-                                    else
-                                        Just (oneAfter.position - oneAfter.position / 2)
-
                         boardId =
                             model.board |> Maybe.map .id |> Maybe.withDefault ""
 
                         ( cmd, maybeUpdatedColumn ) =
-                            case maybeNewPosition of
+                            case calculateDropPosition droppedPosition dragColumn board of
                                 Just newPosition ->
                                     let
                                         column =
@@ -445,6 +392,61 @@ update session connection pageExternalMsg msg model =
                     Debug.log "msg" msg
             in
             ( model, Cmd.none, connection, Cmd.none )
+
+
+calculateDropPosition droppedPosition dragColumn board =
+    let
+        columnIndex =
+            droppedPosition.x // 272
+
+        isDraggingFromLeft =
+            dragColumn.startPosition.x < droppedPosition.x
+
+        ( beforeIndex, afterIndex ) =
+            if isDraggingFromLeft then
+                ( columnIndex, columnIndex + 1 )
+
+            else
+                ( columnIndex - 1, columnIndex )
+
+        maybeOneBefore =
+            getAt board.columns beforeIndex
+
+        maybeOneAfter =
+            getAt board.columns afterIndex
+    in
+    case ( maybeOneBefore, maybeOneAfter ) of
+        ( Nothing, Nothing ) ->
+            Nothing
+
+        ( Just oneBefore, Just oneAfter ) ->
+            Just (oneBefore.position + (oneAfter.position - oneBefore.position) / 2)
+
+        ( Just oneBefore, Nothing ) ->
+            if oneBefore.id == dragColumn.column.id then
+                let
+                    lastColumnPosition =
+                        getAt board.columns (List.length board.columns - 1)
+                            |> Maybe.map .position
+                            |> Maybe.withDefault 1024.0
+                in
+                Just (lastColumnPosition + lastColumnPosition / 2)
+
+            else
+                Just (oneBefore.position + oneBefore.position / 2)
+
+        ( Nothing, Just oneAfter ) ->
+            if oneAfter.id == dragColumn.column.id then
+                let
+                    firstColumnPosition =
+                        getAt board.columns 0
+                            |> Maybe.map .position
+                            |> Maybe.withDefault 0.9999999
+                in
+                Just (firstColumnPosition - firstColumnPosition / 2)
+
+            else
+                Just (oneAfter.position - oneAfter.position / 2)
 
 
 joinedAbsintheChannel : Connection msg -> (Msg -> msg) -> BoardWithRelations -> ( Connection msg, Cmd msg )
