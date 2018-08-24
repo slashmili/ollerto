@@ -493,15 +493,23 @@ updateColumnsInModel columnEvent model =
                         isAlreadyThere =
                             List.any (\c -> c.id == columnEvent.column.id) board.columns
                     in
-                    if not isAlreadyThere && columnEvent.action == "created" then
-                        let
-                            updatedBoard =
-                                { board | columns = columnEvent.column :: board.columns }
-                        in
-                        Just <| sortBoardColumns updatedBoard
+                    case columnEvent.action of
+                        "created" ->
+                            if not isAlreadyThere then
+                                let
+                                    updatedBoard =
+                                        { board | columns = columnEvent.column :: board.columns }
+                                in
+                                Just <| sortBoardColumns updatedBoard
 
-                    else
-                        Just board
+                            else
+                                Just board
+
+                        "updated" ->
+                            Just <| sortBoardColumns (updateColumnsInBoard columnEvent.column board)
+
+                        _ ->
+                            Just board
     in
     { model | board = board }
 
