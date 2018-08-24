@@ -27,6 +27,7 @@ import Task
 type Msg
     = SubmitNewColumn
     | SetNewColumnName String
+    | ShowCardComposeForm Data.Column.Column
     | JoinedAbsintheControl Value
     | BoardChangeEvent Value
     | SubscribedToBoard Value
@@ -49,6 +50,12 @@ type alias ColumnModelForm =
     }
 
 
+type alias CardModelForm =
+    { title : String
+    , column : Data.Column.Column
+    }
+
+
 type alias DragColumn =
     { column : Data.Column.Column
     , startPosition : Position
@@ -61,6 +68,7 @@ type alias Model =
     , newColumn : ColumnModelForm
     , subscriptionEventType : Dict String EventType
     , dragColumn : Maybe DragColumn
+    , newCard : Maybe CardModelForm
     }
 
 
@@ -75,6 +83,7 @@ initialModel =
     , newColumn = { name = "", errors = [], boardId = "" }
     , subscriptionEventType = Dict.empty
     , dragColumn = Nothing
+    , newCard = Nothing
     }
 
 
@@ -119,16 +128,16 @@ view session model =
 viewColumns : BoardWithRelations -> Model -> Html Msg
 viewColumns board model =
     div []
-        (List.indexedMap (viewColumn model.dragColumn (List.length board.columns)) board.columns
+        (List.indexedMap (viewColumn model.dragColumn (List.length board.columns) model) board.columns
             ++ [ viewNewColumn model ]
         )
 
 
-viewColumn : Maybe DragColumn -> Int -> Int -> Data.Column.Column -> Html Msg
-viewColumn maybeDragingColumn maxLength idx columnModel =
+viewColumn : Maybe DragColumn -> Int -> Model -> Int -> Data.Column.Column -> Html Msg
+viewColumn maybeDragingColumn maxLength model idx columnModel =
     case maybeDragingColumn of
         Nothing ->
-            viewColumnWrapper columnModel Style.empty
+            viewColumnWrapper columnModel Style.empty model
 
         Just dragingColumn ->
             let
@@ -164,7 +173,7 @@ viewColumn maybeDragingColumn maxLength idx columnModel =
                         []
 
                 divs =
-                    shadowDiv ++ [ viewColumnWrapper columnModel moveingStyle ]
+                    shadowDiv ++ [ viewColumnWrapper columnModel moveingStyle model ]
             in
             -- if a column is dragged from left, put the shadow on the right of columns
             if isDraggingFromLeft then
@@ -174,13 +183,14 @@ viewColumn maybeDragingColumn maxLength idx columnModel =
                 span [] divs
 
 
-viewColumnWrapper columnModel moveingStyle =
+viewColumnWrapper columnModel moveingStyle model =
     div [ css [ Style.batch Style.Board.columnWrapper moveingStyle ] ]
         [ div [ css [ Style.Board.columnStyle ] ]
             [ div [ css [ Style.Board.columnHeaderStyle ] ]
                 [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DragColumnStart columnModel) ] [ text columnModel.name ]
                 ]
             , div [ css [ Style.Board.cards ] ] viewCards
+            , viewNewCard columnModel model
             ]
         ]
 
@@ -192,15 +202,55 @@ onMouseDown msg =
 
 viewCards : List (Html Msg)
 viewCards =
-    List.range 1 10
-        |> List.map
-            (\i ->
-                a [ css [ Style.Board.card ] ]
-                    [ div [ css [ Style.Board.cardDetails ] ]
-                        [ text ("Card #" ++ toString i)
+    --    List.range 1 10
+    --        |> List.map
+    --            (\i ->
+    --                a [ css [ Style.Board.card ] ]
+    --                    [ div [ css [ Style.Board.cardDetails ] ]
+    --                        [ text ("Card #" ++ toString i)
+    --                        ]
+    --                    ]
+    --            )
+    []
+
+
+viewNewCard : Data.Column.Column -> Model -> Html Msg
+viewNewCard columnModel model =
+    case model.newCard of
+        Just newColumn ->
+            if newColumn.column == columnModel then
+                div [ css [ Style.Board.cardComposer ] ]
+                    [ div [ css [ Style.Board.card ] ]
+                        [ div [ css [ Style.Board.cardDetails ] ]
+                            [ textarea
+                                [ css [ Style.Board.cardTextareaComposer ]
+                                , placeholder "Enter a title for this card…"
+                                ]
+                                []
+                            , div []
+                                [ button [ onClick (ShowCardComposeForm columnModel) ] [ text "Add Card" ]
+                                ]
+                            ]
                         ]
                     ]
-            )
+
+            else
+                a
+                    [ css [ Style.Board.cardLinkComposer ]
+                    , onClick (ShowCardComposeForm columnModel)
+                    ]
+                    [ span [ class "icon-sm icon-add" ] []
+                    , span [] [ text "Add a card" ]
+                    ]
+
+        Nothing ->
+            a
+                [ css [ Style.Board.cardLinkComposer ]
+                , onClick (ShowCardComposeForm columnModel)
+                ]
+                [ span [ class "icon-sm icon-add" ] []
+                , span [] [ text "Add a card" ]
+                ]
 
 
 viewNewColumn : Model -> Html Msg
@@ -385,6 +435,9 @@ update session connection pageExternalMsg msg model =
                                 |> Result.withDefault model
                     in
                     ( updatedModel, Cmd.none, connection, Cmd.none )
+
+        ShowCardComposeForm column ->
+            ( { model | newCard = Just { column = column, title = "" } }, Cmd.none, connection, Cmd.none )
 
         _ ->
             let

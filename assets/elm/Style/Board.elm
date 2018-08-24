@@ -1,4 +1,23 @@
-module Style.Board exposing (boardCanvas, boardHeader, boardHeaderName, boardMainContent, boardWrapper, card, cardDetails, cards, columnHeaderNameStyle, columnHeaderStyle, columnShadowWrapper, columnStyle, columnWrapper, columns, movingColumn)
+module Style.Board exposing
+    ( boardCanvas
+    , boardHeader
+    , boardHeaderName
+    , boardMainContent
+    , boardWrapper
+    , card
+    , cardComposer
+    , cardDetails
+    , cardLinkComposer
+    , cardTextareaComposer
+    , cards
+    , columnHeaderNameStyle
+    , columnHeaderStyle
+    , columnShadowWrapper
+    , columnStyle
+    , columnWrapper
+    , columns
+    , movingColumn
+    )
 
 import Css exposing (..)
 
@@ -183,4 +202,49 @@ cardDetails =
         , padding3 (px 6) (px 8) (px 2)
         , position relative
         , zIndex (int 10)
+        ]
+
+
+cardLinkComposer : Style
+cardLinkComposer =
+    Css.batch
+        [ borderRadius4 (px 0) (px 0) (px 3) (px 3)
+        , color (hex "8c8c8c")
+        , property "fex" "0 0 auto"
+        , padding2 (px 8) (px 10)
+        , position relative
+        , textDecoration none
+        , property "-webkit-user-select" "none"
+        , property "-moz-user-select" "none"
+        , property "-ms-user-select" "none"
+        , property "user-select" "none"
+        , cursor pointer
+        , hover
+            [ backgroundColor (hex "cdd2d4")
+            , color (hex "444")
+            , textDecoration underline
+            ]
+        ]
+
+
+cardComposer : Style
+cardComposer =
+    Css.batch
+        [ property "padding-bottom" "8px"
+        ]
+
+
+cardTextareaComposer : Style
+cardTextareaComposer =
+    Css.batch
+        [ property "background" "none"
+        , property "border" "none"
+        , property "box-shadow" "none"
+        , property "height" "auto"
+        , marginBottom (px 4)
+        , maxHeight (px 162)
+        , minHeight (px 54)
+        , overflowY auto
+        , padding (px 0)
+        , width (pct 100)
         ]
