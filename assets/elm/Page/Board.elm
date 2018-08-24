@@ -234,14 +234,24 @@ update session connection pageExternalMsg msg model =
             case ( model.board, model.dragColumn ) of
                 ( Just board, Just dragColumn ) ->
                     let
-                        position =
+                        columnIndex =
                             pos.x // 272
 
+                        isDraggingFromLeft =
+                            dragColumn.startPosition.x < pos.x
+
+                        ( beforeIndex, afterIndex ) =
+                            if isDraggingFromLeft then
+                                ( columnIndex, columnIndex + 1 )
+
+                            else
+                                ( columnIndex - 1, columnIndex )
+
                         maybeOneBefore =
-                            getAt board.columns (position - 1)
+                            getAt board.columns beforeIndex
 
                         maybeOneAfter =
-                            getAt board.columns (position + 1)
+                            getAt board.columns afterIndex
 
                         maybeNewPosition =
                             case ( maybeOneBefore, maybeOneAfter ) of
