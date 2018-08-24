@@ -107,7 +107,6 @@ view session model =
                     , div [ css [ Style.Board.boardCanvas ] ]
                         [ div [ css [ Style.Board.columns ] ]
                             [ viewColumns board model
-                            , viewNewColumn model
                             ]
                         ]
                     ]
@@ -120,51 +119,63 @@ view session model =
 viewColumns : BoardWithRelations -> Model -> Html Msg
 viewColumns board model =
     div []
-        (List.indexedMap (viewColumn model.dragColumn) board.columns)
+        (List.indexedMap (viewColumn model.dragColumn (List.length board.columns)) board.columns
+            ++ [ viewNewColumn model ]
+        )
 
 
-viewColumn : Maybe DragColumn -> Int -> Data.Column.Column -> Html Msg
-viewColumn maybeDragingColumn idx columnModel =
-    let
-        maybeCurrentColumnDraggingColumn =
-            maybeDragingColumn
-                |> Maybe.andThen
-                    (\{ column, startPosition, currentPosition } ->
-                        if column == columnModel then
-                            Just (DragColumn column startPosition currentPosition)
+viewColumn : Maybe DragColumn -> Int -> Int -> Data.Column.Column -> Html Msg
+viewColumn maybeDragingColumn maxLength idx columnModel =
+    case maybeDragingColumn of
+        Nothing ->
+            viewColumnWrapper columnModel Style.empty
 
-                        else
-                            Nothing
-                    )
+        Just dragingColumn ->
+            let
+                moveingStyle =
+                    if dragingColumn.column == columnModel then
+                        Style.Board.movingColumn dragingColumn.startPosition dragingColumn.currentPosition
 
-        moveStyle =
-            maybeCurrentColumnDraggingColumn
-                |> Maybe.map
-                    (\dragColumn ->
-                        Style.Board.movingColumn dragColumn.startPosition dragColumn.currentPosition
-                    )
-                |> Maybe.withDefault Style.empty
+                    else
+                        Style.empty
 
-        shouldShowTheShadow =
-            case maybeDragingColumn of
-                Nothing ->
-                    False
+                isDraggingFromLeft =
+                    dragingColumn.column.position < columnModel.position
 
-                Just dragColumn ->
-                    idx == (dragColumn.currentPosition.x // 272) + 1
-    in
-    if shouldShowTheShadow then
-        span []
-            [ div [ css [ Style.batch Style.Board.columnWrapper Style.Board.columnShadowWrapper ] ] []
-            , viewColumnWrapper columnModel moveStyle
-            ]
+                isLastColumnView =
+                    (idx + 1) == maxLength
 
-    else
-        viewColumnWrapper columnModel moveStyle
+                currentPositionColumn =
+                    dragingColumn.currentPosition.x // 272
+
+                shouldShowTheShadow =
+                    -- If a column is dragged more than the last column, keep the shadow style in the leftest column
+                    if isLastColumnView && currentPositionColumn >= maxLength then
+                        True
+
+                    else
+                        idx == currentPositionColumn
+
+                shadowDiv =
+                    if shouldShowTheShadow then
+                        [ div [ css [ Style.batch Style.Board.columnWrapper Style.Board.columnShadowWrapper ] ] [] ]
+
+                    else
+                        []
+
+                divs =
+                    shadowDiv ++ [ viewColumnWrapper columnModel moveingStyle ]
+            in
+            -- if a column is dragged from left, put the shadow on the right of columns
+            if isDraggingFromLeft then
+                span [] (List.reverse divs)
+
+            else
+                span [] divs
 
 
-viewColumnWrapper columnModel moveStyle =
-    div [ css [ Style.batch Style.Board.columnWrapper moveStyle ] ]
+viewColumnWrapper columnModel moveingStyle =
+    div [ css [ Style.batch Style.Board.columnWrapper moveingStyle ] ]
         [ div [ css [ Style.Board.columnStyle ] ]
             [ div [ css [ Style.Board.columnHeaderStyle ] ]
                 [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DragColumnStart columnModel) ] [ text columnModel.name ]
@@ -194,17 +205,19 @@ viewCards =
 
 viewNewColumn : Model -> Html Msg
 viewNewColumn model =
-    div []
-        [ text "New column"
-        , HtmlStyled.form [ onSubmit SubmitNewColumn ]
-            [ input
-                [ onInput SetNewColumnName
-                , placeholder "name"
-                , value model.newColumn.name
+    div [ css [ Style.Board.columnWrapper ] ]
+        [ div [ css [ Style.Board.columnStyle ] ]
+            [ text "New column"
+            , HtmlStyled.form [ onSubmit SubmitNewColumn ]
+                [ input
+                    [ onInput SetNewColumnName
+                    , placeholder "name"
+                    , value model.newColumn.name
+                    ]
+                    []
                 ]
-                []
+            , button [ onClick SubmitNewColumn ] [ text "Create" ]
             ]
-        , button [ onClick SubmitNewColumn ] [ text "Create" ]
         ]
 
 
@@ -218,32 +231,84 @@ update session connection pageExternalMsg msg model =
             ( { model | dragColumn = Maybe.map (\{ column, startPosition } -> DragColumn column startPosition pos) model.dragColumn }, Cmd.none, connection, Cmd.none )
 
         DragColumnEnd pos ->
-            let
-                position =
-                    (pos.x // 272) + 1
+            case ( model.board, model.dragColumn ) of
+                ( Just board, Just dragColumn ) ->
+                    let
+                        position =
+                            pos.x // 272
 
-                boardId =
-                    model.board |> Maybe.map .id |> Maybe.withDefault ""
+                        maybeOneBefore =
+                            getAt board.columns (position - 1)
 
-                cmd =
-                    case model.dragColumn of
-                        Just dragColumn ->
-                            let
-                                column =
-                                    dragColumn.column
+                        maybeOneAfter =
+                            getAt board.columns (position + 1)
 
-                                newColumn =
-                                    { column | position = position }
-                            in
-                            session.user
-                                |> Maybe.map .token
-                                |> Request.Column.updatePosition newColumn boardId
-                                |> Task.attempt ReceiveUpdateColumnPositionMutationResponse
+                        maybeNewPosition =
+                            case ( maybeOneBefore, maybeOneAfter ) of
+                                ( Nothing, Nothing ) ->
+                                    Nothing
+
+                                ( Just oneBefore, Just oneAfter ) ->
+                                    Just (oneBefore.position + (oneAfter.position - oneBefore.position) / 2)
+
+                                ( Just oneBefore, Nothing ) ->
+                                    if oneBefore.id == dragColumn.column.id then
+                                        let
+                                            lastColumnPosition =
+                                                getAt board.columns (List.length board.columns - 1)
+                                                    |> Maybe.map .position
+                                                    |> Maybe.withDefault 1024.0
+                                        in
+                                        Just (lastColumnPosition + lastColumnPosition / 2)
+
+                                    else
+                                        Just (oneBefore.position + oneBefore.position / 2)
+
+                                ( Nothing, Just oneAfter ) ->
+                                    if oneAfter.id == dragColumn.column.id then
+                                        let
+                                            firstColumnPosition =
+                                                getAt board.columns 0
+                                                    |> Maybe.map .position
+                                                    |> Maybe.withDefault 0.9999999
+                                        in
+                                        Just (firstColumnPosition - firstColumnPosition / 2)
+
+                                    else
+                                        Just (oneAfter.position - oneAfter.position / 2)
+
+                        boardId =
+                            model.board |> Maybe.map .id |> Maybe.withDefault ""
+
+                        ( cmd, maybeUpdatedColumn ) =
+                            case maybeNewPosition of
+                                Just newPosition ->
+                                    let
+                                        column =
+                                            dragColumn.column
+
+                                        newColumn =
+                                            { column | position = newPosition }
+                                    in
+                                    ( session.user
+                                        |> Maybe.map .token
+                                        |> Request.Column.updatePosition newColumn boardId
+                                        |> Task.attempt ReceiveUpdateColumnPositionMutationResponse
+                                    , Just newColumn
+                                    )
+
+                                Nothing ->
+                                    ( Cmd.none, Nothing )
+                    in
+                    case maybeUpdatedColumn of
+                        Just updatedColumn ->
+                            ( { model | dragColumn = Nothing, board = Just (updateColumnsInBoard updatedColumn board) }, cmd, connection, Cmd.none )
 
                         Nothing ->
-                            Cmd.none
-            in
-            ( { model | dragColumn = Nothing }, cmd, connection, Cmd.none )
+                            ( { model | dragColumn = Nothing }, Cmd.none, connection, Cmd.none )
+
+                _ ->
+                    ( { model | dragColumn = Nothing }, Cmd.none, connection, Cmd.none )
 
         BoardLoaded value ->
             let
@@ -389,6 +454,18 @@ joinedAbsintheChannel connection pageExternalMsg board =
     ( Connection.updateConnection socket connection, phxCmd )
 
 
+{-| Returns `Just` the element at the given index in the list,
+or `Nothing` if the list is not long enough.
+-}
+getAt : List a -> Int -> Maybe a
+getAt xs idx =
+    if idx < 0 then
+        Nothing
+
+    else
+        List.head <| List.drop idx xs
+
+
 subscribedToColumnChange : Connection msg -> (Msg -> msg) -> String -> ( Connection msg, Cmd msg )
 subscribedToColumnChange connection pageExternalMsg subId =
     let
@@ -427,6 +504,23 @@ updateColumnsInModel columnEvent model =
                         Just board
     in
     { model | board = board }
+
+
+updateColumnsInBoard : Data.Column.Column -> BoardWithRelations -> BoardWithRelations
+updateColumnsInBoard column board =
+    let
+        columns =
+            List.map
+                (\columnIter ->
+                    if columnIter.id == column.id then
+                        column
+
+                    else
+                        columnIter
+                )
+                board.columns
+    in
+    sortBoardColumns { board | columns = columns }
 
 
 sortBoardColumns : BoardWithRelations -> BoardWithRelations

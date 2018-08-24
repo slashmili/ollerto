@@ -4,7 +4,7 @@ import GraphQL.Request.Builder as Builder
 
 
 type alias Column =
-    { id : String, name : String, position : Int }
+    { id : String, name : String, position : Float }
 
 
 type alias ColumnEvent =
@@ -16,7 +16,7 @@ object =
     Builder.object Column
         |> Builder.with (Builder.field "id" [] Builder.string)
         |> Builder.with (Builder.field "name" [] Builder.string)
-        |> Builder.with (Builder.field "position" [] Builder.int)
+        |> Builder.with (Builder.field "position" [] Builder.float)
 
 
 columnEventObject : Builder.ValueSpec Builder.NonNull Builder.ObjectType ColumnEvent vars

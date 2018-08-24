@@ -30,7 +30,7 @@ defmodule OllertoWeb.Schema.BoardTypes do
   input_object :create_column_input do
     field :name, non_null(:string)
     field :board_id, non_null(:id)
-    field :position, :integer
+    field :position, :float
   end
 
   object :create_column_result do
@@ -41,7 +41,7 @@ defmodule OllertoWeb.Schema.BoardTypes do
   input_object :update_column_position_input do
     field :id, non_null(:id)
     field :board_id, non_null(:id)
-    field :position, non_null(:integer)
+    field :position, non_null(:float)
   end
 
   object :update_column_result do

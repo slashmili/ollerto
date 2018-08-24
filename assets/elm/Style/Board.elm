@@ -104,7 +104,9 @@ movingColumn startPosition currentPosition =
         , zIndex (int 1000)
         , left (px (toFloat currentPosition.x - 50))
         , top (px (toFloat currentPosition.y - 50))
+        , top (px (toFloat currentPosition.y - 50))
         , property "transform" "rotate(3deg)"
+        , property "willChange" "transform"
         ]
 
 

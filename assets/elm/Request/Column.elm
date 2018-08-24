@@ -92,7 +92,7 @@ createColumnChangeSubscriptionroot =
         (field "boardColumnEvent" [ ( "boardHashid", Arg.variable hashid ) ] Data.Column.columnEventObject)
 
 
-updateColumnMutationRoot : ValueSpec NonNull ObjectType (Helper.MutationResult Column) { b | input : { a | id : String, position : Int, boardId : String } }
+updateColumnMutationRoot : ValueSpec NonNull ObjectType (Helper.MutationResult Column) { b | input : { a | id : String, position : Float, boardId : String } }
 updateColumnMutationRoot =
     let
         result =
@@ -107,13 +107,13 @@ updateColumnMutationRoot =
         )
 
 
-updateColumnInput : Var.Variable { b | input : { a | id : String, position : Int, boardId : String } }
+updateColumnInput : Var.Variable { b | input : { a | id : String, position : Float, boardId : String } }
 updateColumnInput =
     Var.required "input"
         .input
         (Var.object "UpdateColumnPositionInput"
             [ Var.field "id" .id Var.string
-            , Var.field "position" .position Var.int
+            , Var.field "position" .position Var.float
             , Var.field "board_id" .boardId Var.string
             ]
         )
