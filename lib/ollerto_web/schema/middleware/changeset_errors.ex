@@ -10,7 +10,7 @@ defmodule OllertoWeb.Schema.ChangesetErrorsMiddleware do
         res
 
       %{value: value} ->
-        %{res | value: Map.put(value, :errors, [])}
+        %{res | value: Map.put(value || %{}, :errors, [])}
     end
   end
 
