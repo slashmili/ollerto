@@ -42,6 +42,13 @@ defmodule OllertoWeb.Schema do
       resolve &BoardsReslover.create_column/3
     end
 
+    field :create_card, :create_card_result do
+      description "Creates card for authorized user"
+      arg :input, non_null(:create_card_input)
+      middleware AuthorizeMiddleware
+      resolve &BoardsReslover.create_card/3
+    end
+
     field :update_column_position, :update_column_result do
       description "Updates column's position for authorized user"
       arg :input, non_null(:update_column_position_input)
@@ -84,7 +91,7 @@ defmodule OllertoWeb.Schema do
     field :board_column_event, :column_event do
       arg :board_hashid, non_null(:string)
 
-      config(fn args, sc ->
+      config(fn args, _sc ->
         {:ok, topic: args.board_hashid}
       end)
     end

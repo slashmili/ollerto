@@ -51,4 +51,20 @@ defmodule OllertoWeb.BoardsReslover do
       {:ok, %{column: column}}
     end
   end
+
+  def create_card(_, %{input: params}, _) do
+    # TODO: check if user owns the board
+    column = Boards.get_column!(params.column_id)
+    board = Boards.get_board!(column.board_id)
+    position = Boards.get_latest_card_position(column)
+    params = Map.put(params, :position, position + 1024.1)
+
+    with {:ok, card} <- Boards.create_card(params) do
+      Absinthe.Subscription.publish(OllertoWeb.Endpoint, %{action: :created, card: card},
+        board_column_event: board.hashid
+      )
+
+      {:ok, %{card: card}}
+    end
+  end
 end

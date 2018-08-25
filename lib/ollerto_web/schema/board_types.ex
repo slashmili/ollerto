@@ -18,6 +18,13 @@ defmodule OllertoWeb.Schema.BoardTypes do
     field :name, :string
   end
 
+  object :card do
+    field :id, :id
+    field :position, :float
+    field :title, :string
+    field :column_id, :id
+  end
+
   input_object :create_board_input do
     field :name, non_null(:string)
   end
@@ -46,6 +53,17 @@ defmodule OllertoWeb.Schema.BoardTypes do
 
   object :update_column_result do
     field :column, :column
+    field :errors, list_of(:input_error)
+  end
+
+  input_object :create_card_input do
+    field :title, non_null(:string)
+    field :column_id, non_null(:id)
+    field :position, :float
+  end
+
+  object :create_card_result do
+    field :card, :card
     field :errors, list_of(:input_error)
   end
 end
