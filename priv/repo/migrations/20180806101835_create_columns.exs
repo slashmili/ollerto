@@ -5,8 +5,8 @@ defmodule Ollerto.Repo.Migrations.CreateColumns do
     create table(:columns, primary_key: false) do
       add(:id, :binary_id, primary_key: true)
       add(:name, :string)
-      add(:order, :integer)
-      add(:board_id, references(:boards, on_delete: :nothing, type: :binary_id))
+      add(:posiotion, :float)
+      add(:board_id, references(:boards, on_delete: :delete_all, type: :binary_id))
 
       timestamps()
     end
