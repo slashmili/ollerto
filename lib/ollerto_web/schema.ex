@@ -75,6 +75,13 @@ defmodule OllertoWeb.Schema do
       resolve &BoardsReslover.get_board/3
     end
 
+    field :cards, list_of(:card) do
+      description "Lists cards for given board for authorized user"
+      arg :hashid, non_null(:string)
+      middleware AuthorizeMiddleware
+      resolve &BoardsReslover.list_cards/3
+    end
+
     field :user_login, :user do
       resolve fn _, _, _ ->
         {:ok, %{id: "1", email: "TBD"}}

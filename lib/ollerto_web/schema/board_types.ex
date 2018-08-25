@@ -16,6 +16,10 @@ defmodule OllertoWeb.Schema.BoardTypes do
     field :id, :id
     field :position, :integer
     field :name, :string
+
+    field :cards, list_of(:card) do
+      resolve &BoardsReslover.list_cards/3
+    end
   end
 
   object :card do

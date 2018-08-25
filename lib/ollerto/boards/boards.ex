@@ -264,6 +264,14 @@ defmodule Ollerto.Boards do
     Repo.all(Card)
   end
 
+  def list_cards(column: column) do
+    list_cards(column_id: column.id)
+  end
+
+  def list_cards(column_id: column_id) do
+    Repo.all(from(c in Card, where: c.column_id == ^column_id, order_by: [:position]))
+  end
+
   @doc """
   Gets a single card.
 

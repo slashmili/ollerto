@@ -1,6 +1,6 @@
 defmodule OllertoWeb.BoardsReslover do
   alias Ollerto.Boards
-  alias Ollerto.Boards.Board
+  alias Ollerto.Boards.{Board, Column}
 
   def list_boards(_, _, %{context: %{current_user: current_user}}) do
     {:ok, Boards.list_boards(owner: current_user)}
@@ -66,5 +66,9 @@ defmodule OllertoWeb.BoardsReslover do
 
       {:ok, %{card: card}}
     end
+  end
+
+  def list_cards(%Column{} = column, _, _) do
+    {:ok, Boards.list_cards(column: column)}
   end
 end
