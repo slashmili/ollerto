@@ -1,6 +1,6 @@
 module Page.Board exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
-import Data.Board exposing (BoardWithRelations, Hashid)
+import Data.Board exposing (Board, BoardWithRelations, Hashid, boardWithRelationsToBoard)
 import Data.Column exposing (ColumnEvent)
 import Data.Connection as Connection exposing (Connection)
 import Data.Session exposing (Session)
@@ -64,7 +64,8 @@ type alias DragColumn =
 
 
 type alias Model =
-    { board : Maybe BoardWithRelations
+    { board : Maybe Board
+    , columns : List Data.Column.Column
     , newColumn : ColumnModelForm
     , subscriptionEventType : Dict String EventType
     , dragColumn : Maybe DragColumn
@@ -80,6 +81,7 @@ type alias AbsintheSubscription =
 initialModel : Model
 initialModel =
     { board = Nothing
+    , columns = []
     , newColumn = { name = "", errors = [], boardId = "" }
     , subscriptionEventType = Dict.empty
     , dragColumn = Nothing
@@ -125,10 +127,10 @@ view session model =
             text "loading ..."
 
 
-viewColumns : BoardWithRelations -> Model -> Html Msg
+viewColumns : Board -> Model -> Html Msg
 viewColumns board model =
     div []
-        (List.indexedMap (viewColumn model.dragColumn (List.length board.columns) model) board.columns
+        (List.indexedMap (viewColumn model.dragColumn (List.length model.columns) model) model.columns
             ++ [ viewNewColumn model ]
         )
 
@@ -288,7 +290,7 @@ update session connection pageExternalMsg msg model =
                             model.board |> Maybe.map .id |> Maybe.withDefault ""
 
                         ( cmd, maybeUpdatedColumn ) =
-                            case calculateDropPosition droppedPosition dragColumn board of
+                            case calculateDropPosition droppedPosition dragColumn model of
                                 Just newPosition ->
                                     let
                                         column =
@@ -309,7 +311,11 @@ update session connection pageExternalMsg msg model =
                     in
                     case maybeUpdatedColumn of
                         Just updatedColumn ->
-                            ( { model | dragColumn = Nothing, board = Just (updateColumnsInBoard updatedColumn board) }, cmd, connection, Cmd.none )
+                            let
+                                columns =
+                                    updateColumnIfAny updatedColumn model.columns
+                            in
+                            ( { model | dragColumn = Nothing, columns = columns }, cmd, connection, Cmd.none )
 
                         Nothing ->
                             ( { model | dragColumn = Nothing }, Cmd.none, connection, Cmd.none )
@@ -322,11 +328,14 @@ update session connection pageExternalMsg msg model =
                 newColumn =
                     model.newColumn
 
-                updatedModel =
+                ( maybeBoard, columns ) =
                     value
                         |> Decode.decodeValue Request.Board.queryGetDecoder
-                        |> Result.map (\b -> { model | board = Just <| sortBoardColumns b, newColumn = { newColumn | boardId = b.id } })
-                        |> Result.withDefault model
+                        |> Result.map (\b -> boardWithRelationsToBoardAndColumns b)
+                        |> Result.withDefault ( Nothing, [] )
+
+                updatedModel =
+                    { model | board = maybeBoard, columns = columns }
 
                 ( updatedConnection, externalCmd ) =
                     case updatedModel.board of
@@ -362,36 +371,29 @@ update session connection pageExternalMsg msg model =
             ( { model | newColumn = resetNewColumn }, cmd, connection, Cmd.none )
 
         ReceiveUpdateColumnPositionMutationResponse (Ok { object, errors }) ->
-            case ( model.board, object ) of
-                ( Just board, Just updatedColumn ) ->
+            case object of
+                Just updatedColumn ->
                     let
                         columns =
-                            List.map
-                                (\c ->
-                                    if c.id == updatedColumn.id then
-                                        updatedColumn
-
-                                    else
-                                        c
-                                )
-                                board.columns
-
-                        updatedBoard =
-                            { board | columns = columns }
+                            model.columns
+                                |> updateColumnIfAny updatedColumn
+                                |> sortColumns
                     in
-                    ( { model | board = Just <| sortBoardColumns updatedBoard }, Cmd.none, connection, Cmd.none )
+                    ( { model | columns = columns }, Cmd.none, connection, Cmd.none )
 
-                _ ->
+                Nothing ->
                     ( model, Cmd.none, connection, Cmd.none )
 
         ReceiveNewColumnMutationResponse (Ok { object, errors }) ->
             case ( model.board, object ) of
                 ( Just board, Just newColumn ) ->
                     let
-                        updatedBoard =
-                            { board | columns = newColumn :: board.columns }
+                        columns =
+                            newColumn
+                                :: model.columns
+                                |> sortColumns
                     in
-                    ( { model | board = Just <| sortBoardColumns updatedBoard }, Cmd.none, connection, Cmd.none )
+                    ( { model | columns = columns }, Cmd.none, connection, Cmd.none )
 
                 ( Just board, Nothing ) ->
                     -- TODO: read errors
@@ -431,7 +433,7 @@ update session connection pageExternalMsg msg model =
                         updatedModel =
                             event
                                 |> SubscriptionEvent.decodeEvent Request.Column.subscribeColumnChangeDecoder
-                                |> Result.map (\e -> updateColumnsInModel e model)
+                                |> Result.map (\event -> updateColumnsInModelWithEvent event model)
                                 |> Result.withDefault model
                     in
                     ( updatedModel, Cmd.none, connection, Cmd.none )
@@ -447,7 +449,7 @@ update session connection pageExternalMsg msg model =
             ( model, Cmd.none, connection, Cmd.none )
 
 
-calculateDropPosition droppedPosition dragColumn board =
+calculateDropPosition droppedPosition dragColumn model =
     let
         columnIndex =
             droppedPosition.x // 272
@@ -463,10 +465,10 @@ calculateDropPosition droppedPosition dragColumn board =
                 ( columnIndex - 1, columnIndex )
 
         maybeOneBefore =
-            getAt board.columns beforeIndex
+            getAt model.columns beforeIndex
 
         maybeOneAfter =
-            getAt board.columns afterIndex
+            getAt model.columns afterIndex
     in
     case ( maybeOneBefore, maybeOneAfter ) of
         ( Nothing, Nothing ) ->
@@ -479,7 +481,7 @@ calculateDropPosition droppedPosition dragColumn board =
             if oneBefore.id == dragColumn.column.id then
                 let
                     lastColumnPosition =
-                        getAt board.columns (List.length board.columns - 1)
+                        getAt model.columns (List.length model.columns - 1)
                             |> Maybe.map .position
                             |> Maybe.withDefault 1024.0
                 in
@@ -492,7 +494,7 @@ calculateDropPosition droppedPosition dragColumn board =
             if oneAfter.id == dragColumn.column.id then
                 let
                     firstColumnPosition =
-                        getAt board.columns 0
+                        getAt model.columns 0
                             |> Maybe.map .position
                             |> Maybe.withDefault 0.9999999
                 in
@@ -502,7 +504,7 @@ calculateDropPosition droppedPosition dragColumn board =
                 Just (oneAfter.position - oneAfter.position / 2)
 
 
-joinedAbsintheChannel : Connection msg -> (Msg -> msg) -> BoardWithRelations -> ( Connection msg, Cmd msg )
+joinedAbsintheChannel : Connection msg -> (Msg -> msg) -> Board -> ( Connection msg, Cmd msg )
 joinedAbsintheChannel connection pageExternalMsg board =
     let
         payload =
@@ -545,64 +547,48 @@ subscribedToColumnChange connection pageExternalMsg subId =
     ( Connection.updateConnection socket connection, phxCmd )
 
 
-updateColumnsInModel : ColumnEvent -> Model -> Model
-updateColumnsInModel columnEvent model =
+updateColumnsInModelWithEvent : ColumnEvent -> Model -> Model
+updateColumnsInModelWithEvent columnEvent model =
     let
-        board =
-            case model.board of
-                Nothing ->
-                    Nothing
-
-                Just board ->
-                    let
-                        isAlreadyThere =
-                            List.any (\c -> c.id == columnEvent.column.id) board.columns
-                    in
-                    case columnEvent.action of
-                        "created" ->
-                            if not isAlreadyThere then
-                                let
-                                    updatedBoard =
-                                        { board | columns = columnEvent.column :: board.columns }
-                                in
-                                Just <| sortBoardColumns updatedBoard
-
-                            else
-                                Just board
-
-                        "updated" ->
-                            Just <| sortBoardColumns (updateColumnsInBoard columnEvent.column board)
-
-                        _ ->
-                            Just board
+        isAlreadyThere =
+            List.any (\c -> c.id == columnEvent.column.id) model.columns
     in
-    { model | board = board }
+    case columnEvent.action of
+        "created" ->
+            if not isAlreadyThere then
+                { model | columns = sortColumns <| columnEvent.column :: model.columns }
+
+            else
+                model
+
+        "updated" ->
+            { model | columns = sortColumns <| updateColumnIfAny columnEvent.column model.columns }
+
+        _ ->
+            model
 
 
-updateColumnsInBoard : Data.Column.Column -> BoardWithRelations -> BoardWithRelations
-updateColumnsInBoard column board =
-    let
-        columns =
-            List.map
-                (\columnIter ->
-                    if columnIter.id == column.id then
-                        column
-
-                    else
-                        columnIter
-                )
-                board.columns
-    in
-    sortBoardColumns { board | columns = columns }
+boardWithRelationsToBoardAndColumns : BoardWithRelations -> ( Maybe Board, List Data.Column.Column )
+boardWithRelationsToBoardAndColumns board =
+    ( Just <| boardWithRelationsToBoard board, board.columns )
 
 
-sortBoardColumns : BoardWithRelations -> BoardWithRelations
-sortBoardColumns board =
-    let
-        sortedColumns =
-            List.sortBy .position board.columns
-    in
-    { board | columns = sortedColumns }
+updateColumnIfAny : Data.Column.Column -> List Data.Column.Column -> List Data.Column.Column
+updateColumnIfAny updatedColumn columns =
+    List.map
+        (\column ->
+            if column.id == updatedColumn.id then
+                updatedColumn
+
+            else
+                column
+        )
+        columns
+
+
+sortColumns : List Data.Column.Column -> List Data.Column.Column
+sortColumns columns =
+    List.sortBy .position columns
 
 
 subscriptions : Model -> Sub Msg

@@ -1,4 +1,4 @@
-module Data.Board exposing (Board, BoardWithRelations, Hashid, hashidParser, hashidToString, object, objectWithRelation, stringToHashid)
+module Data.Board exposing (Board, BoardWithRelations, Hashid, boardWithRelationsToBoard, hashidParser, hashidToString, object, objectWithRelation, stringToHashid)
 
 -- External
 
@@ -49,3 +49,8 @@ objectWithRelation =
         |> Builder.with (Builder.field "name" [] Builder.string)
         |> Builder.with (Builder.field "hashid" [] (Builder.map stringToHashid Builder.string))
         |> Builder.with (Builder.field "columns" [] (Builder.list Data.Column.object))
+
+
+boardWithRelationsToBoard : BoardWithRelations -> Board
+boardWithRelationsToBoard boardWithRel =
+    Board boardWithRel.id boardWithRel.name boardWithRel.hashid
