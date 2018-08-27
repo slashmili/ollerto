@@ -9,7 +9,7 @@ import Dict exposing (Dict)
 import Html
 import Html.Styled as HtmlStyled exposing (..)
 import Html.Styled.Attributes exposing (..)
-import Html.Styled.Events exposing (on, onClick, onInput, onSubmit)
+import Html.Styled.Events exposing (keyCode, on, onClick, onInput, onSubmit)
 import Json.Decode as Decode exposing (Value)
 import Json.Encode
 import Mouse exposing (Position)
@@ -32,6 +32,7 @@ type Msg
     | ShowCardComposeForm Data.Column.Column
     | SetNewCardTitle String
     | SubmitNewCard CardModelForm
+    | KeyDownOnNewCard CardModelForm Int
     | JoinedAbsintheControl Value
     | BoardChangeEvent Value
     | SubscribedToBoard Value
@@ -231,6 +232,11 @@ onMouseDown msg =
     on "mousedown" (Decode.map msg Mouse.position)
 
 
+onKeyDown : (Int -> msg) -> Attribute msg
+onKeyDown msg =
+    on "keydown" (Decode.map msg keyCode)
+
+
 maybeViewCards : Data.Column.Column -> Status (Dict String (List Card)) -> List (Html Msg)
 maybeViewCards column cardsDictStatus =
     case cardsDictStatus of
@@ -271,6 +277,7 @@ viewNewCard columnModel model =
                                 [ css [ Style.Board.cardTextareaComposer ]
                                 , placeholder "Enter a title for this card…"
                                 , onInput SetNewCardTitle
+                                , onKeyDown (KeyDownOnNewCard newColumn)
                                 ]
                                 []
                             , div []
@@ -498,18 +505,15 @@ update session connection pageExternalMsg msg model =
         SetNewCardTitle title ->
             ( { model | newCard = model.newCard |> Maybe.map (\f -> { f | title = title }) }, Cmd.none, connection, Cmd.none )
 
-        SubmitNewCard newCard ->
-            let
-                cmd =
-                    session.user
-                        |> Maybe.map .token
-                        |> Request.Card.create { title = newCard.title, columnId = newCard.column.id }
-                        |> Task.attempt ReceiveNewCardMutationResponse
+        KeyDownOnNewCard newCard pressedKey ->
+            if pressedKey == 13 then
+                ( { model | newCard = Nothing }, createNewCardCommand session newCard, connection, Cmd.none )
 
-                _ =
-                    Debug.log "msg" msg
-            in
-            ( { model | newCard = Nothing }, cmd, connection, Cmd.none )
+            else
+                ( model, Cmd.none, connection, Cmd.none )
+
+        SubmitNewCard newCard ->
+            ( { model | newCard = Nothing }, createNewCardCommand session newCard, connection, Cmd.none )
 
         ReceiveNewCardMutationResponse (Ok { object, errors }) ->
             case ( model.cards, object ) of
@@ -525,6 +529,13 @@ update session connection pageExternalMsg msg model =
                     Debug.log "msg" msg
             in
             ( model, Cmd.none, connection, Cmd.none )
+
+
+createNewCardCommand session newCard =
+    session.user
+        |> Maybe.map .token
+        |> Request.Card.create { title = newCard.title, columnId = newCard.column.id }
+        |> Task.attempt ReceiveNewCardMutationResponse
 
 
 calculateDropPosition droppedPosition dragColumn model =
