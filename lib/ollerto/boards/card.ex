@@ -7,7 +7,7 @@ defmodule Ollerto.Boards.Card do
   schema "cards" do
     field :position, :float
     field :title, :string
-    field :column_id, :binary_id
+    belongs_to :column, Ollerto.Boards.Column
 
     timestamps()
   end

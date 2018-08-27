@@ -272,6 +272,17 @@ defmodule Ollerto.Boards do
     Repo.all(from(c in Card, where: c.column_id == ^column_id, order_by: [:position]))
   end
 
+  def list_cards(hashid: hashid) do
+    query =
+      from card in Card,
+        join: column in assoc(card, :column),
+        join: board in assoc(column, :board),
+        where: board.hashid == ^hashid,
+        order_by: [:position]
+
+    Repo.all(query)
+  end
+
   @doc """
   Gets a single card.
 

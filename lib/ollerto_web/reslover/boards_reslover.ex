@@ -71,4 +71,8 @@ defmodule OllertoWeb.BoardsReslover do
   def list_cards(%Column{} = column, _, _) do
     {:ok, Boards.list_cards(column: column)}
   end
+
+  def list_cards(_, %{hashid: hashid}, _) do
+    {:ok, Boards.list_cards(hashid: hashid)}
+  end
 end

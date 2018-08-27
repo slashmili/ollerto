@@ -7,7 +7,7 @@ defmodule Ollerto.Boards.Column do
   schema "columns" do
     field :name, :string
     field :position, :float, default: 0.0
-    field :board_id, :binary_id
+    belongs_to :board, Ollerto.Boards.Board
 
     timestamps()
   end

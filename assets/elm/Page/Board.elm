@@ -1,6 +1,7 @@
 module Page.Board exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
 import Data.Board exposing (Board, BoardWithRelations, Hashid, boardWithRelationsToBoard)
+import Data.Card exposing (Card)
 import Data.Column exposing (ColumnEvent)
 import Data.Connection as Connection exposing (Connection)
 import Data.Session exposing (Session)
@@ -17,6 +18,7 @@ import Phoenix.Channel as Channel
 import Phoenix.Push as Push
 import Phoenix.Socket as Socket
 import Request.Board
+import Request.Card
 import Request.Column
 import Request.SubscriptionEvent as SubscriptionEvent
 import Style
@@ -32,6 +34,7 @@ type Msg
     | BoardChangeEvent Value
     | SubscribedToBoard Value
     | BoardLoaded Value
+    | CardsLoaded Value
     | ReceiveNewColumnMutationResponse Request.Column.ColumnMutationResponse
     | ReceiveUpdateColumnPositionMutationResponse Request.Column.ColumnMutationResponse
     | DragColumnAt Position
@@ -66,6 +69,7 @@ type alias DragColumn =
 type alias Model =
     { board : Maybe Board
     , columns : List Data.Column.Column
+    , cards : Status (Dict String (List Card))
     , newColumn : ColumnModelForm
     , subscriptionEventType : Dict String EventType
     , dragColumn : Maybe DragColumn
@@ -78,10 +82,18 @@ type alias AbsintheSubscription =
     }
 
 
+type Status a
+    = Loading
+    | LoadingSlowly
+    | Loaded a
+    | Failed
+
+
 initialModel : Model
 initialModel =
     { board = Nothing
     , columns = []
+    , cards = Loading
     , newColumn = { name = "", errors = [], boardId = "" }
     , subscriptionEventType = Dict.empty
     , dragColumn = Nothing
@@ -92,18 +104,32 @@ initialModel =
 init : Hashid -> Connection msg -> (Msg -> msg) -> ( Connection msg, Cmd msg )
 init hashid connection pageExternalMsg =
     let
-        payload =
+        loadBoardPayload =
             Request.Board.queryGet hashid
 
+        loadCardsPayload =
+            Request.Card.queryList hashid
+
+        ( socket, phxCmd ) =
+            ( connection.socket, Cmd.none )
+                |> queryPipeLine connection (pageExternalMsg << BoardLoaded) loadBoardPayload
+                |> queryPipeLine connection (pageExternalMsg << CardsLoaded) loadCardsPayload
+    in
+    ( Connection.updateConnection socket connection, phxCmd )
+
+
+queryPipeLine : Connection msg -> (Value -> msg) -> Json.Encode.Value -> ( Socket.Socket msg, Cmd msg ) -> ( Socket.Socket msg, Cmd msg )
+queryPipeLine connection jsonValueToMsg payload ( socket, cmd ) =
+    let
         pushEvent =
             Push.init "doc" Connection.absintheChannelName
                 |> Push.withPayload payload
-                |> Push.onOk (pageExternalMsg << BoardLoaded)
+                |> Push.onOk jsonValueToMsg
 
-        ( socket, phxCmd ) =
-            Phoenix.push connection.mapMessage pushEvent connection.socket
+        ( updatedSocket, newCmd ) =
+            Phoenix.push connection.mapMessage pushEvent socket
     in
-    ( Connection.updateConnection socket connection, phxCmd )
+    ( updatedSocket, Cmd.batch [ cmd, newCmd ] )
 
 
 view : Session -> Model -> Html Msg
@@ -191,7 +217,7 @@ viewColumnWrapper columnModel moveingStyle model =
             [ div [ css [ Style.Board.columnHeaderStyle ] ]
                 [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DragColumnStart columnModel) ] [ text columnModel.name ]
                 ]
-            , div [ css [ Style.Board.cards ] ] viewCards
+            , div [ css [ Style.Board.cards ] ] (maybeViewCards columnModel model.cards)
             , viewNewCard columnModel model
             ]
         ]
@@ -202,18 +228,32 @@ onMouseDown msg =
     on "mousedown" (Decode.map msg Mouse.position)
 
 
-viewCards : List (Html Msg)
-viewCards =
-    --    List.range 1 10
-    --        |> List.map
-    --            (\i ->
-    --                a [ css [ Style.Board.card ] ]
-    --                    [ div [ css [ Style.Board.cardDetails ] ]
-    --                        [ text ("Card #" ++ toString i)
-    --                        ]
-    --                    ]
-    --            )
-    []
+maybeViewCards : Data.Column.Column -> Status (Dict String (List Card)) -> List (Html Msg)
+maybeViewCards column cardsDictStatus =
+    case cardsDictStatus of
+        Loaded cardsDict ->
+            viewCards column cardsDict
+
+        _ ->
+            []
+
+
+viewCards : Data.Column.Column -> Dict String (List Card) -> List (Html Msg)
+viewCards column cardsDict =
+    case Dict.get column.id cardsDict of
+        Just cards ->
+            cards
+                |> List.map
+                    (\item ->
+                        a [ css [ Style.Board.card ] ]
+                            [ div [ css [ Style.Board.cardDetails ] ]
+                                [ text item.title
+                                ]
+                            ]
+                    )
+
+        Nothing ->
+            []
 
 
 viewNewCard : Data.Column.Column -> Model -> Html Msg
@@ -346,6 +386,16 @@ update session connection pageExternalMsg msg model =
                             ( connection, Cmd.none )
             in
             ( updatedModel, Cmd.none, updatedConnection, externalCmd )
+
+        CardsLoaded value ->
+            let
+                cards =
+                    value
+                        |> Decode.decodeValue Request.Card.queryListDecoder
+                        |> Result.map (\cards -> foldByColumnId cards)
+                        |> Result.withDefault Dict.empty
+            in
+            ( { model | cards = Loaded cards }, Cmd.none, connection, Cmd.none )
 
         SetNewColumnName name ->
             let
@@ -589,6 +639,23 @@ updateColumnIfAny updatedColumn columns =
 sortColumns : List Data.Column.Column -> List Data.Column.Column
 sortColumns columns =
     List.sortBy .position columns
+
+
+dictGetWithDefault : List a -> comparable -> Dict comparable (List a) -> List a
+dictGetWithDefault defaultValue targetKey dict =
+    dict
+        |> Dict.get targetKey
+        |> Maybe.map (\list -> list)
+        |> Maybe.withDefault defaultValue
+
+
+foldByColumnId : List Card -> Dict String (List Card)
+foldByColumnId cards =
+    let
+        toDict =
+            \item dict -> Dict.insert item.columnId (item :: dictGetWithDefault [] item.columnId dict) dict
+    in
+    List.foldr toDict Dict.empty cards
 
 
 subscriptions : Model -> Sub Msg
