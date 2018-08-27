@@ -30,6 +30,8 @@ type Msg
     = SubmitNewColumn
     | SetNewColumnName String
     | ShowCardComposeForm Data.Column.Column
+    | SetNewCardTitle String
+    | SubmitNewCard CardModelForm
     | JoinedAbsintheControl Value
     | BoardChangeEvent Value
     | SubscribedToBoard Value
@@ -37,6 +39,7 @@ type Msg
     | CardsLoaded Value
     | ReceiveNewColumnMutationResponse Request.Column.ColumnMutationResponse
     | ReceiveUpdateColumnPositionMutationResponse Request.Column.ColumnMutationResponse
+    | ReceiveNewCardMutationResponse Request.Card.CardMutationResponse
     | DragColumnAt Position
     | DragColumnEnd Position
     | DragColumnStart Data.Column.Column Position
@@ -267,10 +270,11 @@ viewNewCard columnModel model =
                             [ textarea
                                 [ css [ Style.Board.cardTextareaComposer ]
                                 , placeholder "Enter a title for this card…"
+                                , onInput SetNewCardTitle
                                 ]
                                 []
                             , div []
-                                [ button [ onClick (ShowCardComposeForm columnModel) ] [ text "Add Card" ]
+                                [ button [ onClick (SubmitNewCard newColumn) ] [ text "Add Card" ]
                                 ]
                             ]
                         ]
@@ -427,7 +431,7 @@ update session connection pageExternalMsg msg model =
                         columns =
                             model.columns
                                 |> updateColumnIfAny updatedColumn
-                                |> sortColumns
+                                |> sortItemsByPosition
                     in
                     ( { model | columns = columns }, Cmd.none, connection, Cmd.none )
 
@@ -441,7 +445,7 @@ update session connection pageExternalMsg msg model =
                         columns =
                             newColumn
                                 :: model.columns
-                                |> sortColumns
+                                |> sortItemsByPosition
                     in
                     ( { model | columns = columns }, Cmd.none, connection, Cmd.none )
 
@@ -490,6 +494,30 @@ update session connection pageExternalMsg msg model =
 
         ShowCardComposeForm column ->
             ( { model | newCard = Just { column = column, title = "" } }, Cmd.none, connection, Cmd.none )
+
+        SetNewCardTitle title ->
+            ( { model | newCard = model.newCard |> Maybe.map (\f -> { f | title = title }) }, Cmd.none, connection, Cmd.none )
+
+        SubmitNewCard newCard ->
+            let
+                cmd =
+                    session.user
+                        |> Maybe.map .token
+                        |> Request.Card.create { title = newCard.title, columnId = newCard.column.id }
+                        |> Task.attempt ReceiveNewCardMutationResponse
+
+                _ =
+                    Debug.log "msg" msg
+            in
+            ( { model | newCard = Nothing }, cmd, connection, Cmd.none )
+
+        ReceiveNewCardMutationResponse (Ok { object, errors }) ->
+            case ( model.cards, object ) of
+                ( Loaded cards, Just newCard ) ->
+                    ( { model | cards = Loaded <| insertCardInColumnDict newCard cards }, Cmd.none, connection, Cmd.none )
+
+                ( _, _ ) ->
+                    ( model, Cmd.none, connection, Cmd.none )
 
         _ ->
             let
@@ -606,13 +634,13 @@ updateColumnsInModelWithEvent columnEvent model =
     case columnEvent.action of
         "created" ->
             if not isAlreadyThere then
-                { model | columns = sortColumns <| columnEvent.column :: model.columns }
+                { model | columns = sortItemsByPosition <| columnEvent.column :: model.columns }
 
             else
                 model
 
         "updated" ->
-            { model | columns = sortColumns <| updateColumnIfAny columnEvent.column model.columns }
+            { model | columns = sortItemsByPosition <| updateColumnIfAny columnEvent.column model.columns }
 
         _ ->
             model
@@ -636,9 +664,9 @@ updateColumnIfAny updatedColumn columns =
         columns
 
 
-sortColumns : List Data.Column.Column -> List Data.Column.Column
-sortColumns columns =
-    List.sortBy .position columns
+sortItemsByPosition : List { a | position : Float } -> List { a | position : Float }
+sortItemsByPosition items =
+    List.sortBy .position items
 
 
 dictGetWithDefault : List a -> comparable -> Dict comparable (List a) -> List a
@@ -649,13 +677,20 @@ dictGetWithDefault defaultValue targetKey dict =
         |> Maybe.withDefault defaultValue
 
 
+insertCardInColumnDict : Card -> Dict String (List Card) -> Dict String (List Card)
+insertCardInColumnDict card columnsDict =
+    let
+        currentCards =
+            columnsDict
+                |> dictGetWithDefault [] card.columnId
+                |> sortItemsByPosition
+    in
+    Dict.insert card.columnId (sortItemsByPosition <| card :: currentCards) columnsDict
+
+
 foldByColumnId : List Card -> Dict String (List Card)
 foldByColumnId cards =
-    let
-        toDict =
-            \item dict -> Dict.insert item.columnId (item :: dictGetWithDefault [] item.columnId dict) dict
-    in
-    List.foldr toDict Dict.empty cards
+    List.foldr insertCardInColumnDict Dict.empty cards
 
 
 subscriptions : Model -> Sub Msg
