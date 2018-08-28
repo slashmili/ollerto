@@ -44,6 +44,9 @@ type Msg
     | DraggingColumnAt Position
     | DraggingColumnEnd Position
     | DraggingColumnStart Data.Column.Column Position
+    | DraggingCardAt Position
+    | DraggingCardEnd Position
+    | DraggingCardStart Card Position
 
 
 type EventType
@@ -70,6 +73,13 @@ type alias DraggingColumn =
     }
 
 
+type alias DraggingCard =
+    { card : Card
+    , startPosition : Position
+    , currentPosition : Position
+    }
+
+
 type alias Model =
     { board : Maybe Board
     , columns : List Data.Column.Column
@@ -77,6 +87,7 @@ type alias Model =
     , newColumn : ColumnModelForm
     , subscriptionEventType : Dict String EventType
     , draggingColumn : Maybe DraggingColumn
+    , draggingCard : Maybe DraggingCard
     , newCard : Maybe CardModelForm
     }
 
@@ -101,6 +112,7 @@ initialModel =
     , newColumn = { name = "", errors = [], boardId = "" }
     , subscriptionEventType = Dict.empty
     , draggingColumn = Nothing
+    , draggingCard = Nothing
     , newCard = Nothing
     }
 
@@ -221,7 +233,7 @@ viewColumnWrapper columnModel moveingStyle model =
             [ div [ css [ Style.Board.columnHeaderStyle ] ]
                 [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DraggingColumnStart columnModel) ] [ text columnModel.name ]
                 ]
-            , div [ css [ Style.Board.cards ] ] (maybeViewCards columnModel model.cards)
+            , div [ css [ Style.Board.cards ] ] (maybeViewCards columnModel model.cards model)
             , viewNewCard columnModel model
             ]
         ]
@@ -237,26 +249,29 @@ onKeyDown msg =
     on "keydown" (Decode.map msg keyCode)
 
 
-maybeViewCards : Data.Column.Column -> Status (Dict String (List Card)) -> List (Html Msg)
-maybeViewCards column cardsDictStatus =
+maybeViewCards : Data.Column.Column -> Status (Dict String (List Card)) -> Model -> List (Html Msg)
+maybeViewCards column cardsDictStatus model =
     case cardsDictStatus of
         Loaded cardsDict ->
-            viewCards column cardsDict
+            viewCards column cardsDict model
 
         _ ->
             []
 
 
-viewCards : Data.Column.Column -> Dict String (List Card) -> List (Html Msg)
-viewCards column cardsDict =
+viewCards : Data.Column.Column -> Dict String (List Card) -> Model -> List (Html Msg)
+viewCards column cardsDict model =
     case Dict.get column.id cardsDict of
         Just cards ->
             cards
                 |> List.map
-                    (\item ->
-                        a [ css [ Style.Board.card ] ]
+                    (\card ->
+                        a
+                            [ css [ Style.Board.card ]
+                            , onMouseDown (DraggingCardStart card)
+                            ]
                             [ div [ css [ Style.Board.cardDetails ] ]
-                                [ text item.title
+                                [ text card.title
                                 ]
                             ]
                     )
@@ -327,6 +342,27 @@ viewNewColumn model =
 update : Session -> Connection mainMsg -> (Msg -> mainMsg) -> Msg -> Model -> ( Model, Cmd Msg, Connection mainMsg, Cmd mainMsg )
 update session connection pageExternalMsg msg model =
     case msg of
+        DraggingCardStart card pos ->
+            ( { model | draggingCard = Just <| DraggingCard card pos pos }
+            , Cmd.none
+            , connection
+            , Cmd.none
+            )
+
+        DraggingCardEnd droppedPosition ->
+            ( { model | draggingCard = Nothing }
+            , Cmd.none
+            , connection
+            , Cmd.none
+            )
+
+        DraggingCardAt pos ->
+            ( { model | draggingCard = Maybe.map (\{ card, startPosition } -> DraggingCard card startPosition pos) model.draggingCard }
+            , Cmd.none
+            , connection
+            , Cmd.none
+            )
+
         DraggingColumnStart column pos ->
             ( { model | draggingColumn = Just <| DraggingColumn column pos pos }, Cmd.none, connection, Cmd.none )
 
@@ -706,9 +742,12 @@ foldByColumnId cards =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.draggingColumn of
-        Nothing ->
-            Sub.batch []
-
-        Just _ ->
+    case ( model.draggingColumn, model.draggingCard ) of
+        ( Just _, _ ) ->
             Sub.batch [ Mouse.moves DraggingColumnAt, Mouse.ups DraggingColumnEnd ]
+
+        ( _, Just _ ) ->
+            Sub.batch [ Mouse.moves DraggingCardAt, Mouse.ups DraggingCardEnd ]
+
+        _ ->
+            Sub.batch []
