@@ -16,6 +16,7 @@ module Style.Board exposing
     , columnStyle
     , columnWrapper
     , columns
+    , movingCard
     , movingColumn
     )
 
@@ -126,6 +127,7 @@ movingColumn startPosition currentPosition =
         , top (px (toFloat currentPosition.y - 50))
         , property "transform" "rotate(3deg)"
         , property "willChange" "transform"
+        , cursor grabbing
         ]
 
 
@@ -247,4 +249,25 @@ cardTextareaComposer =
         , overflowY auto
         , padding (px 0)
         , width (pct 100)
+        ]
+
+
+movingCard : { a | x : Int, y : Int } -> { b | x : Int, y : Int } -> Style
+movingCard startPosition currentPosition =
+    Css.batch
+        [ backgroundColor (hex "fff")
+        , borderRadius (px 3)
+        , boxShadow4 (px 0) (px 1) (px 0) (hex "ccc")
+        , cursor pointer
+        , marginBottom (px 8)
+        , maxWidth (px 300)
+        , minHeight (px 20)
+        , textDecoration none
+        , position absolute
+        , zIndex (int 1000)
+        , left (px (toFloat currentPosition.x))
+        , top (px (toFloat currentPosition.y))
+        , property "transform" "rotate(3deg)"
+        , property "willChange" "transform"
+        , cursor grabbing
         ]

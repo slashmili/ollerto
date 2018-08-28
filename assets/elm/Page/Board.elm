@@ -163,6 +163,12 @@ view session model =
                             ]
                         ]
                     ]
+                , case model.draggingCard of
+                    Just draggingCard ->
+                        viewCardA (Style.Board.movingCard draggingCard.startPosition draggingCard.currentPosition) draggingCard.card
+
+                    _ ->
+                        span [] []
                 ]
 
         _ ->
@@ -179,61 +185,72 @@ viewColumns board model =
 
 viewColumn : Maybe DraggingColumn -> Int -> Model -> Int -> Data.Column.Column -> Html Msg
 viewColumn maybeDraggingColumn maxLength model idx columnModel =
+    let
+        isDraggingFromLeft =
+            \draggingItem item -> draggingItem.position < item.position
+
+        isLastColumnView =
+            (idx + 1) == maxLength
+
+        currentPositionColumn =
+            \width position -> position.x // width
+
+        cursorIsPointingHere =
+            \width position ->
+                let
+                    currentPos =
+                        currentPositionColumn width position
+                in
+                -- If a column is dragged further than the last column, keep the shadow style in the leftest column
+                if isLastColumnView && currentPos >= maxLength then
+                    True
+
+                else
+                    idx == currentPos
+    in
     case maybeDraggingColumn of
         Nothing ->
-            viewColumnWrapper columnModel Style.empty model
+            case model.draggingCard of
+                Just draggingCard ->
+                    viewColumnWrapper columnModel Style.empty (cursorIsPointingHere 272 draggingCard.currentPosition) model
+
+                Nothing ->
+                    viewColumnWrapper columnModel Style.empty False model
 
         Just draggingColumn ->
             let
-                moveingStyle =
+                movingStyle =
                     if draggingColumn.column == columnModel then
                         Style.Board.movingColumn draggingColumn.startPosition draggingColumn.currentPosition
 
                     else
                         Style.empty
 
-                isDraggingFromLeft =
-                    draggingColumn.column.position < columnModel.position
-
-                isLastColumnView =
-                    (idx + 1) == maxLength
-
-                currentPositionColumn =
-                    draggingColumn.currentPosition.x // 272
-
-                shouldShowTheShadow =
-                    -- If a column is dragged further than the last column, keep the shadow style in the leftest column
-                    if isLastColumnView && currentPositionColumn >= maxLength then
-                        True
-
-                    else
-                        idx == currentPositionColumn
-
                 shadowDiv =
-                    if shouldShowTheShadow then
+                    if cursorIsPointingHere 272 draggingColumn.currentPosition then
                         [ div [ css [ Style.batch Style.Board.columnWrapper Style.Board.columnShadowWrapper ] ] [] ]
 
                     else
                         []
 
                 divs =
-                    shadowDiv ++ [ viewColumnWrapper columnModel moveingStyle model ]
+                    shadowDiv ++ [ viewColumnWrapper columnModel movingStyle False model ]
             in
             -- if a column is dragged from left, put the shadow on the right of columns
-            if isDraggingFromLeft then
+            if isDraggingFromLeft draggingColumn.column columnModel then
                 span [] (List.reverse divs)
 
             else
                 span [] divs
 
 
-viewColumnWrapper columnModel moveingStyle model =
-    div [ css [ Style.batch Style.Board.columnWrapper moveingStyle ] ]
+viewColumnWrapper columnModel movingStyle cursorIsPointingHere model =
+    div [ css [ Style.batch Style.Board.columnWrapper movingStyle ] ]
         [ div [ css [ Style.Board.columnStyle ] ]
             [ div [ css [ Style.Board.columnHeaderStyle ] ]
                 [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DraggingColumnStart columnModel) ] [ text columnModel.name ]
                 ]
-            , div [ css [ Style.Board.cards ] ] (maybeViewCards columnModel model.cards model)
+            , div [ css [ Style.Board.cards ] ] (maybeViewCards columnModel cursorIsPointingHere model.cards model)
             , viewNewCard columnModel model
             ]
         ]
@@ -249,35 +266,57 @@ onKeyDown msg =
     on "keydown" (Decode.map msg keyCode)
 
 
-maybeViewCards : Data.Column.Column -> Status (Dict String (List Card)) -> Model -> List (Html Msg)
-maybeViewCards column cardsDictStatus model =
+maybeViewCards : Data.Column.Column -> Bool -> Status (Dict String (List Card)) -> Model -> List (Html Msg)
+maybeViewCards column cursorIsPointingHere cardsDictStatus model =
     case cardsDictStatus of
         Loaded cardsDict ->
-            viewCards column cardsDict model
+            viewCards column cardsDict cursorIsPointingHere model
 
         _ ->
             []
 
 
-viewCards : Data.Column.Column -> Dict String (List Card) -> Model -> List (Html Msg)
-viewCards column cardsDict model =
+viewCards : Data.Column.Column -> Dict String (List Card) -> Bool -> Model -> List (Html Msg)
+viewCards column cardsDict cursorIsPointingHere model =
+    let
+        h =
+            if cursorIsPointingHere then
+                text "pointing here"
+
+            else
+                text ""
+    in
     case Dict.get column.id cardsDict of
         Just cards ->
-            cards
-                |> List.map
-                    (\card ->
-                        a
-                            [ css [ Style.Board.card ]
-                            , onMouseDown (DraggingCardStart card)
-                            ]
-                            [ div [ css [ Style.Board.cardDetails ] ]
-                                [ text card.title
-                                ]
-                            ]
-                    )
+            h :: List.map (viewCard model.draggingCard) cards
 
         Nothing ->
             []
+
+
+viewCard : Maybe DraggingCard -> Card -> Html Msg
+viewCard maybeDraggingCard card =
+    case Debug.log "maybeDraggingCard" maybeDraggingCard of
+        Just draggingCard ->
+            if draggingCard.card == card then
+                span [] []
+
+            else
+                viewCardA Style.Board.card card
+
+        Nothing ->
+            viewCardA Style.Board.card card
+
+
+viewCardA cssList card =
+    a
+        [ css [ cssList ]
+        , onMouseDown (DraggingCardStart card)
+        ]
+        [ div [ css [ Style.Board.cardDetails ] ]
+            [ text card.title
+            ]
+        ]
 
 
 viewNewCard : Data.Column.Column -> Model -> Html Msg
