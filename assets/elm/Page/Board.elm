@@ -41,9 +41,9 @@ type Msg
     | ReceiveNewColumnMutationResponse Request.Column.ColumnMutationResponse
     | ReceiveUpdateColumnPositionMutationResponse Request.Column.ColumnMutationResponse
     | ReceiveNewCardMutationResponse Request.Card.CardMutationResponse
-    | DragColumnAt Position
-    | DragColumnEnd Position
-    | DragColumnStart Data.Column.Column Position
+    | DraggingColumnAt Position
+    | DraggingColumnEnd Position
+    | DraggingColumnStart Data.Column.Column Position
 
 
 type EventType
@@ -63,7 +63,7 @@ type alias CardModelForm =
     }
 
 
-type alias DragColumn =
+type alias DraggingColumn =
     { column : Data.Column.Column
     , startPosition : Position
     , currentPosition : Position
@@ -76,7 +76,7 @@ type alias Model =
     , cards : Status (Dict String (List Card))
     , newColumn : ColumnModelForm
     , subscriptionEventType : Dict String EventType
-    , dragColumn : Maybe DragColumn
+    , draggingColumn : Maybe DraggingColumn
     , newCard : Maybe CardModelForm
     }
 
@@ -100,7 +100,7 @@ initialModel =
     , cards = Loading
     , newColumn = { name = "", errors = [], boardId = "" }
     , subscriptionEventType = Dict.empty
-    , dragColumn = Nothing
+    , draggingColumn = Nothing
     , newCard = Nothing
     }
 
@@ -160,34 +160,34 @@ view session model =
 viewColumns : Board -> Model -> Html Msg
 viewColumns board model =
     div []
-        (List.indexedMap (viewColumn model.dragColumn (List.length model.columns) model) model.columns
+        (List.indexedMap (viewColumn model.draggingColumn (List.length model.columns) model) model.columns
             ++ [ viewNewColumn model ]
         )
 
 
-viewColumn : Maybe DragColumn -> Int -> Model -> Int -> Data.Column.Column -> Html Msg
-viewColumn maybeDragingColumn maxLength model idx columnModel =
-    case maybeDragingColumn of
+viewColumn : Maybe DraggingColumn -> Int -> Model -> Int -> Data.Column.Column -> Html Msg
+viewColumn maybeDraggingColumn maxLength model idx columnModel =
+    case maybeDraggingColumn of
         Nothing ->
             viewColumnWrapper columnModel Style.empty model
 
-        Just dragingColumn ->
+        Just draggingColumn ->
             let
                 moveingStyle =
-                    if dragingColumn.column == columnModel then
-                        Style.Board.movingColumn dragingColumn.startPosition dragingColumn.currentPosition
+                    if draggingColumn.column == columnModel then
+                        Style.Board.movingColumn draggingColumn.startPosition draggingColumn.currentPosition
 
                     else
                         Style.empty
 
                 isDraggingFromLeft =
-                    dragingColumn.column.position < columnModel.position
+                    draggingColumn.column.position < columnModel.position
 
                 isLastColumnView =
                     (idx + 1) == maxLength
 
                 currentPositionColumn =
-                    dragingColumn.currentPosition.x // 272
+                    draggingColumn.currentPosition.x // 272
 
                 shouldShowTheShadow =
                     -- If a column is dragged further than the last column, keep the shadow style in the leftest column
@@ -219,7 +219,7 @@ viewColumnWrapper columnModel moveingStyle model =
     div [ css [ Style.batch Style.Board.columnWrapper moveingStyle ] ]
         [ div [ css [ Style.Board.columnStyle ] ]
             [ div [ css [ Style.Board.columnHeaderStyle ] ]
-                [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DragColumnStart columnModel) ] [ text columnModel.name ]
+                [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DraggingColumnStart columnModel) ] [ text columnModel.name ]
                 ]
             , div [ css [ Style.Board.cards ] ] (maybeViewCards columnModel model.cards)
             , viewNewCard columnModel model
@@ -327,25 +327,25 @@ viewNewColumn model =
 update : Session -> Connection mainMsg -> (Msg -> mainMsg) -> Msg -> Model -> ( Model, Cmd Msg, Connection mainMsg, Cmd mainMsg )
 update session connection pageExternalMsg msg model =
     case msg of
-        DragColumnStart column pos ->
-            ( { model | dragColumn = Just <| DragColumn column pos pos }, Cmd.none, connection, Cmd.none )
+        DraggingColumnStart column pos ->
+            ( { model | draggingColumn = Just <| DraggingColumn column pos pos }, Cmd.none, connection, Cmd.none )
 
-        DragColumnAt pos ->
-            ( { model | dragColumn = Maybe.map (\{ column, startPosition } -> DragColumn column startPosition pos) model.dragColumn }, Cmd.none, connection, Cmd.none )
+        DraggingColumnAt pos ->
+            ( { model | draggingColumn = Maybe.map (\{ column, startPosition } -> DraggingColumn column startPosition pos) model.draggingColumn }, Cmd.none, connection, Cmd.none )
 
-        DragColumnEnd droppedPosition ->
-            case ( model.board, model.dragColumn ) of
-                ( Just board, Just dragColumn ) ->
+        DraggingColumnEnd droppedPosition ->
+            case ( model.board, model.draggingColumn ) of
+                ( Just board, Just draggingColumn ) ->
                     let
                         boardId =
                             model.board |> Maybe.map .id |> Maybe.withDefault ""
 
                         ( cmd, maybeUpdatedColumn ) =
-                            case calculateDropPosition droppedPosition dragColumn model of
+                            case calculateDropPosition droppedPosition draggingColumn model of
                                 Just newPosition ->
                                     let
                                         column =
-                                            dragColumn.column
+                                            draggingColumn.column
 
                                         newColumn =
                                             { column | position = newPosition }
@@ -366,13 +366,13 @@ update session connection pageExternalMsg msg model =
                                 columns =
                                     updateColumnIfAny updatedColumn model.columns
                             in
-                            ( { model | dragColumn = Nothing, columns = columns }, cmd, connection, Cmd.none )
+                            ( { model | draggingColumn = Nothing, columns = columns }, cmd, connection, Cmd.none )
 
                         Nothing ->
-                            ( { model | dragColumn = Nothing }, Cmd.none, connection, Cmd.none )
+                            ( { model | draggingColumn = Nothing }, Cmd.none, connection, Cmd.none )
 
                 _ ->
-                    ( { model | dragColumn = Nothing }, Cmd.none, connection, Cmd.none )
+                    ( { model | draggingColumn = Nothing }, Cmd.none, connection, Cmd.none )
 
         BoardLoaded value ->
             let
@@ -538,13 +538,13 @@ createNewCardCommand session newCard =
         |> Task.attempt ReceiveNewCardMutationResponse
 
 
-calculateDropPosition droppedPosition dragColumn model =
+calculateDropPosition droppedPosition draggingColumn model =
     let
         columnIndex =
             droppedPosition.x // 272
 
         isDraggingFromLeft =
-            dragColumn.startPosition.x < droppedPosition.x
+            draggingColumn.startPosition.x < droppedPosition.x
 
         ( beforeIndex, afterIndex ) =
             if isDraggingFromLeft then
@@ -567,7 +567,7 @@ calculateDropPosition droppedPosition dragColumn model =
             Just (oneBefore.position + (oneAfter.position - oneBefore.position) / 2)
 
         ( Just oneBefore, Nothing ) ->
-            if oneBefore.id == dragColumn.column.id then
+            if oneBefore.id == draggingColumn.column.id then
                 let
                     lastColumnPosition =
                         getAt model.columns (List.length model.columns - 1)
@@ -580,7 +580,7 @@ calculateDropPosition droppedPosition dragColumn model =
                 Just (oneBefore.position + oneBefore.position / 2)
 
         ( Nothing, Just oneAfter ) ->
-            if oneAfter.id == dragColumn.column.id then
+            if oneAfter.id == draggingColumn.column.id then
                 let
                     firstColumnPosition =
                         getAt model.columns 0
@@ -706,9 +706,9 @@ foldByColumnId cards =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.dragColumn of
+    case model.draggingColumn of
         Nothing ->
             Sub.batch []
 
         Just _ ->
-            Sub.batch [ Mouse.moves DragColumnAt, Mouse.ups DragColumnEnd ]
+            Sub.batch [ Mouse.moves DraggingColumnAt, Mouse.ups DraggingColumnEnd ]
