@@ -190,7 +190,7 @@ viewColumn maybeDragingColumn maxLength model idx columnModel =
                     dragingColumn.currentPosition.x // 272
 
                 shouldShowTheShadow =
-                    -- If a column is dragged more than the last column, keep the shadow style in the leftest column
+                    -- If a column is dragged further than the last column, keep the shadow style in the leftest column
                     if isLastColumnView && currentPositionColumn >= maxLength then
                         True
 
