@@ -30,6 +30,7 @@ type Msg
     = SubmitNewColumn
     | SetNewColumnName String
     | ShowCardComposeForm Data.Column.Column
+    | OpenCardDialog Card
     | SetNewCardTitle String
     | SubmitNewCard CardModelForm
     | KeyDownOnNewCard CardModelForm Int
@@ -88,6 +89,7 @@ type alias Model =
     , subscriptionEventType : Dict String EventType
     , draggingColumn : Maybe DraggingColumn
     , draggingCard : Maybe DraggingCard
+    , clickedOnCard : Maybe DraggingCard
     , newCard : Maybe CardModelForm
     }
 
@@ -113,6 +115,7 @@ initialModel =
     , subscriptionEventType = Dict.empty
     , draggingColumn = Nothing
     , draggingCard = Nothing
+    , clickedOnCard = Nothing
     , newCard = Nothing
     }
 
@@ -348,6 +351,7 @@ viewCardA cssList card =
     a
         [ css [ cssList ]
         , onMouseDown (DraggingCardStart card)
+        , onClick (OpenCardDialog card)
         ]
         [ div [ css [ Style.Board.cardDetails ] ]
             [ text card.title
@@ -418,7 +422,7 @@ update : Session -> Connection mainMsg -> (Msg -> mainMsg) -> Msg -> Model -> ( 
 update session connection pageExternalMsg msg model =
     case msg of
         DraggingCardStart card pos ->
-            ( { model | draggingCard = Just <| DraggingCard card pos pos }
+            ( { model | clickedOnCard = Just <| DraggingCard card pos pos }
             , Cmd.none
             , connection
             , Cmd.none
@@ -432,11 +436,28 @@ update session connection pageExternalMsg msg model =
             )
 
         DraggingCardAt pos ->
-            ( { model | draggingCard = Maybe.map (\{ card, startPosition } -> DraggingCard card startPosition pos) model.draggingCard }
-            , Cmd.none
-            , connection
-            , Cmd.none
-            )
+            case model.clickedOnCard of
+                Nothing ->
+                    ( { model | draggingCard = Maybe.map (\{ card, startPosition } -> DraggingCard card startPosition pos) model.draggingCard }
+                    , Cmd.none
+                    , connection
+                    , Cmd.none
+                    )
+
+                Just clickedOnCard ->
+                    if abs (clickedOnCard.startPosition.y - pos.y) > 5 then
+                        ( { model | clickedOnCard = Nothing, draggingCard = Maybe.map (\{ card, startPosition } -> DraggingCard card startPosition pos) model.clickedOnCard }
+                        , Cmd.none
+                        , connection
+                        , Cmd.none
+                        )
+
+                    else
+                        ( model
+                        , Cmd.none
+                        , connection
+                        , Cmd.none
+                        )
 
         DraggingColumnStart column pos ->
             ( { model | draggingColumn = Just <| DraggingColumn column pos pos }, Cmd.none, connection, Cmd.none )
@@ -634,6 +655,13 @@ update session connection pageExternalMsg msg model =
                 ( _, _ ) ->
                     ( model, Cmd.none, connection, Cmd.none )
 
+        OpenCardDialog card ->
+            let
+                _ =
+                    Debug.log "open card page" card
+            in
+            ( { model | clickedOnCard = Nothing, draggingCard = Nothing }, Cmd.none, connection, Cmd.none )
+
         _ ->
             let
                 _ =
@@ -817,7 +845,15 @@ foldByColumnId cards =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case ( model.draggingColumn, model.draggingCard ) of
+    let
+        draggingCard =
+            if model.draggingCard == Nothing then
+                model.clickedOnCard
+
+            else
+                model.draggingCard
+    in
+    case ( model.draggingColumn, draggingCard ) of
         ( Just _, _ ) ->
             Sub.batch [ Mouse.moves DraggingColumnAt, Mouse.ups DraggingColumnEnd ]
 
