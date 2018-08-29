@@ -195,7 +195,7 @@ viewColumn maybeDraggingColumn maxLength model idx columnModel =
         currentPositionColumn =
             \width position -> position.x // width
 
-        cursorIsPointingHere =
+        cursorIsPointingThisColumn =
             \width position ->
                 let
                     currentPos =
@@ -212,7 +212,7 @@ viewColumn maybeDraggingColumn maxLength model idx columnModel =
         Nothing ->
             case model.draggingCard of
                 Just draggingCard ->
-                    viewColumnWrapper columnModel Style.empty (cursorIsPointingHere 272 draggingCard.currentPosition) model
+                    viewColumnWrapper columnModel Style.empty (cursorIsPointingThisColumn 272 draggingCard.currentPosition) model
 
                 Nothing ->
                     viewColumnWrapper columnModel Style.empty False model
@@ -227,7 +227,7 @@ viewColumn maybeDraggingColumn maxLength model idx columnModel =
                         Style.empty
 
                 shadowDiv =
-                    if cursorIsPointingHere 272 draggingColumn.currentPosition then
+                    if cursorIsPointingThisColumn 272 draggingColumn.currentPosition then
                         [ div [ css [ Style.batch Style.Board.columnWrapper Style.Board.columnShadowWrapper ] ] [] ]
 
                     else
@@ -244,13 +244,13 @@ viewColumn maybeDraggingColumn maxLength model idx columnModel =
                 span [] divs
 
 
-viewColumnWrapper columnModel movingStyle cursorIsPointingHere model =
+viewColumnWrapper columnModel movingStyle cursorIsPointingThisColumn model =
     div [ css [ Style.batch Style.Board.columnWrapper movingStyle ] ]
         [ div [ css [ Style.Board.columnStyle ] ]
             [ div [ css [ Style.Board.columnHeaderStyle ] ]
                 [ span [ css [ Style.Board.columnHeaderNameStyle ], onMouseDown (DraggingColumnStart columnModel) ] [ text columnModel.name ]
                 ]
-            , div [ css [ Style.Board.cards ] ] (maybeViewCards columnModel cursorIsPointingHere model.cards model)
+            , div [ css [ Style.Board.cards ] ] (maybeViewCards columnModel cursorIsPointingThisColumn model.cards model)
             , viewNewCard columnModel model
             ]
         ]
@@ -267,45 +267,78 @@ onKeyDown msg =
 
 
 maybeViewCards : Data.Column.Column -> Bool -> Status (Dict String (List Card)) -> Model -> List (Html Msg)
-maybeViewCards column cursorIsPointingHere cardsDictStatus model =
+maybeViewCards column cursorIsPointingThisColumn cardsDictStatus model =
     case cardsDictStatus of
         Loaded cardsDict ->
-            viewCards column cardsDict cursorIsPointingHere model
+            viewCards column cardsDict cursorIsPointingThisColumn model
 
         _ ->
             []
 
 
 viewCards : Data.Column.Column -> Dict String (List Card) -> Bool -> Model -> List (Html Msg)
-viewCards column cardsDict cursorIsPointingHere model =
-    let
-        h =
-            if cursorIsPointingHere then
-                text "pointing here"
-
-            else
-                text ""
-    in
+viewCards column cardsDict cursorIsPointingThisColumn model =
     case Dict.get column.id cardsDict of
         Just cards ->
-            h :: List.map (viewCard model.draggingCard) cards
+            let
+                cardsCount =
+                    List.length cards
+            in
+            List.indexedMap (viewCard model.draggingCard cursorIsPointingThisColumn cardsCount) cards
 
         Nothing ->
             []
 
 
-viewCard : Maybe DraggingCard -> Card -> Html Msg
-viewCard maybeDraggingCard card =
-    case Debug.log "maybeDraggingCard" maybeDraggingCard of
-        Just draggingCard ->
-            if draggingCard.card == card then
-                span [] []
+viewCard : Maybe DraggingCard -> Bool -> Int -> Int -> Card -> Html Msg
+viewCard maybeDraggingCard cursorIsPointingThisColumn maxLength idx card =
+    case ( maybeDraggingCard, cursorIsPointingThisColumn ) of
+        ( Just draggingCard, True ) ->
+            maybeViewCardShadow draggingCard maxLength idx card
 
-            else
-                viewCardA Style.Board.card card
-
-        Nothing ->
+        _ ->
             viewCardA Style.Board.card card
+
+
+maybeViewCardShadow draggingCard maxLength idx card =
+    let
+        maxHeight =
+            30
+
+        isLastCardView =
+            (idx + 1) == maxLength
+
+        currentPositionCard =
+            \height position -> (position.y - 86) // height
+
+        cursorIsPointingHere =
+            \height position ->
+                let
+                    currentPos =
+                        currentPositionCard height position
+                in
+                (idx - 1) == currentPos
+
+        isDraggingCardIsOutOfColumn =
+            isLastCardView && currentPositionCard maxHeight draggingCard.currentPosition >= maxLength - 1
+
+        isCursorIsPointingHere =
+            cursorIsPointingHere maxHeight draggingCard.currentPosition
+
+        shadowDiv =
+            [ div [ css [ Style.batch Style.Board.cardDetails Style.Board.cardShadow ] ] [] ]
+    in
+    if draggingCard.card == card then
+        text ""
+
+    else if isDraggingCardIsOutOfColumn then
+        span [] ([ viewCardA Style.Board.card card ] ++ shadowDiv)
+
+    else if isCursorIsPointingHere then
+        span [] (shadowDiv ++ [ viewCardA Style.Board.card card ])
+
+    else
+        span [] [ viewCardA Style.Board.card card ]
 
 
 viewCardA cssList card =

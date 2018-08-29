@@ -8,6 +8,7 @@ module Style.Board exposing
     , cardComposer
     , cardDetails
     , cardLinkComposer
+    , cardShadow
     , cardTextareaComposer
     , cards
     , columnHeaderNameStyle
@@ -270,4 +271,13 @@ movingCard startPosition currentPosition =
         , property "transform" "rotate(3deg)"
         , property "willChange" "transform"
         , cursor grabbing
+        ]
+
+
+cardShadow =
+    Css.batch
+        [ backgroundColor (hex "c0c5ce")
+        , maxWidth (px 300)
+        , minHeight (px 20)
+        , padding3 (px 6) (px 8) (px 2)
         ]
