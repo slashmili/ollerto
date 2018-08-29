@@ -328,7 +328,10 @@ maybeViewCardShadow draggingCard maxLength idx card =
         shadowDiv =
             [ div [ css [ Style.batch Style.Board.cardDetails Style.Board.cardShadow ] ] [] ]
     in
-    if draggingCard.card == card then
+    if isCursorIsPointingHere && draggingCard.card == card then
+        span [] shadowDiv
+
+    else if draggingCard.card == card then
         text ""
 
     else if isDraggingCardIsOutOfColumn then
