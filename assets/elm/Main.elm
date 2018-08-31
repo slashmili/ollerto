@@ -3,7 +3,8 @@ module Main exposing (Model(..))
 import App
 import Browser exposing (Document)
 import Browser.Navigation as Nav
-import Html exposing (..)
+import Html
+import Html.Styled as HtmlStyled exposing (..)
 import Json.Decode as Decode exposing (Value)
 import Route exposing (Route)
 import Session exposing (Session)
@@ -28,12 +29,17 @@ init maybeViewer url navKey =
 
 view : Model -> Document Msg
 view model =
-    { title = "my app title"
-    , body =
-        [ div []
-            [ a [ Route.href Route.Login ] [ text "login" ]
-            ]
-        ]
+    let
+        body =
+            HtmlStyled.toUnstyled
+                (div
+                    []
+                    [ a [ Route.href Route.Login ] [ text "login" ]
+                    ]
+                )
+    in
+    { title = "Ollerto"
+    , body = [ body ]
     }
 
 
