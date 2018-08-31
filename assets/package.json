@@ -19,7 +19,7 @@
     "babel-loader": "^7.1.5",
     "babel-preset-env": "^1.7.0",
     "css-loader": "^1.0.0",
-    "elm-webpack-loader": "^4.5.0",
+    "elm-webpack-loader": "^5.0.0",
     "file-loader": "^1.1.11",
     "style-loader": "^0.21.0",
     "url-loader": "^1.0.1",

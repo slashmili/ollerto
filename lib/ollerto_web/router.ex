@@ -14,18 +14,18 @@ defmodule OllertoWeb.Router do
     plug OllertoWeb.Context
   end
 
-  scope "/", OllertoWeb do
-    # Use the default browser stack
-    pipe_through :browser
-
-    get "/", PageController, :index
-  end
-
   scope "/api" do
     pipe_through :api
 
     forward "/v1/graphql", Absinthe.Plug.GraphiQL,
       schema: OllertoWeb.Schema,
       socket: OllertoWeb.UserSocket
+  end
+
+  scope "/", OllertoWeb do
+    # Use the default browser stack
+    pipe_through :browser
+
+    get "/*path", PageController, :index
   end
 end
