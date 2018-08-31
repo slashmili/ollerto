@@ -6,6 +6,7 @@ import Browser.Navigation as Nav
 import Html
 import Html.Styled as HtmlStyled exposing (..)
 import Json.Decode as Decode exposing (Value)
+import Page.Login as Login
 import Route exposing (Route)
 import Session exposing (Session)
 import Url exposing (Url)
@@ -15,6 +16,7 @@ import Viewer exposing (Viewer)
 type Model
     = NotFound Session
     | Redirect Session
+    | Login Login.Model
 
 
 init : Maybe Viewer -> Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -30,7 +32,18 @@ init maybeViewer url navKey =
 view : Model -> Document Msg
 view model =
     let
-        body =
+        viewPage toMsg config =
+            let
+                { title, content } =
+                    config
+
+                --Page.view (Session.viewer (toSession model)) page config
+            in
+            { title = title
+            , body = List.map (Html.map toMsg) [ HtmlStyled.toUnstyled content ]
+            }
+
+        body2 =
             HtmlStyled.toUnstyled
                 (div
                     []
@@ -38,9 +51,14 @@ view model =
                     ]
                 )
     in
-    { title = "Ollerto"
-    , body = [ body ]
-    }
+    case model of
+        Login login ->
+            viewPage GotLoginMsg (Login.view login)
+
+        _ ->
+            { title = "Ollerto"
+            , body = [ body2 ]
+            }
 
 
 
@@ -52,6 +70,7 @@ type Msg
     | ChangedUrl Url
     | ClickedLink Browser.UrlRequest
     | GotSession Session
+    | GotLoginMsg Login.Msg
 
 
 toSession : Model -> Session
@@ -62,6 +81,9 @@ toSession page =
 
         NotFound session ->
             session
+
+        Login login ->
+            Login.toSession login
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -75,13 +97,17 @@ changeRouteTo maybeRoute model =
             ( NotFound session, Cmd.none )
 
         Just Route.Root ->
-            ( NotFound session, Cmd.none )
+            ( model, Route.replaceUrl (Session.navKey session) Route.Login )
+
+        Just Route.Home ->
+            ( model, Route.replaceUrl (Session.navKey session) Route.Login )
+
+        Just Route.Login ->
+            Login.init session
+                |> updateWith Login GotLoginMsg model
 
         Just Route.Logout ->
             ( model, App.logout )
-
-        _ ->
-            ( NotFound session, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -108,6 +134,13 @@ update msg model =
             ( model, Cmd.none )
 
 
+updateWith : (subModel -> Model) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
+updateWith toModel toMsg model ( subModel, subCmd ) =
+    ( toModel subModel
+    , Cmd.map toMsg subCmd
+    )
+
+
 
 -- SUBSCRIPTION
 
@@ -120,6 +153,9 @@ subscriptions model =
 
         Redirect _ ->
             Session.changes GotSession (Session.navKey (toSession model))
+
+        _ ->
+            Sub.none
 
 
 
