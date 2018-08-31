@@ -847,11 +847,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         draggingCard =
-            if model.draggingCard == Nothing then
-                model.clickedOnCard
-
-            else
-                model.draggingCard
+            Maybe.map2 (\_ dg -> dg) model.draggingCard model.clickedOnCard
     in
     case ( model.draggingColumn, draggingCard ) of
         ( Just _, _ ) ->
