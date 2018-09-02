@@ -2,8 +2,8 @@ defmodule OllertoWeb.Schema.AccountTypes do
   use Absinthe.Schema.Notation
 
   object :user do
-    field :id, :id
-    field :email, :string
+    field :id, non_null(:id)
+    field :email, non_null(:string)
   end
 
   input_object :register_user_input do
@@ -23,6 +23,6 @@ defmodule OllertoWeb.Schema.AccountTypes do
 
   object :authenticate_user_result do
     field :token, non_null(:string)
-    field :user, :user
+    field :user, non_null(:user)
   end
 end

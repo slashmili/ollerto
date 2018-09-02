@@ -1,16 +1,24 @@
-port module App exposing (Cred, application, credHeader, decode, logout, onStoreChange, storageDecoder, storeCache, username, viewerChanges)
+port module App exposing (Cred, application, credHeader, decode, logout, mutation, onStoreChange, storageDecoder, storeCache, storeCred, username, viewerChanges)
 
 import Browser
 import Browser.Navigation as Nav
+import Graphql.Http
+import Graphql.Operation exposing (RootMutation)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet)
 import Http
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Pipeline exposing (optional, required)
+import Json.Encode as Encode
 import Url exposing (Url)
 import Username exposing (Username)
 
 
 type Cred
     = Cred Username String
+
+
+apiUrl =
+    "/api/v1/graphql"
 
 
 username : Cred -> Username
@@ -41,6 +49,22 @@ decodeFromChange : Decode.Decoder (Cred -> viewer) -> Decode.Value -> Maybe view
 decodeFromChange viewerDecoder val =
     Decode.decodeValue (storageDecoder viewerDecoder) val
         |> Result.toMaybe
+
+
+storeCred : Cred -> Cmd msg
+storeCred (Cred uname token) =
+    let
+        json =
+            Encode.object
+                [ ( "user"
+                  , Encode.object
+                        [ ( "username", Username.encode uname )
+                        , ( "token", Encode.string token )
+                        ]
+                  )
+                ]
+    in
+    storeCache (Just json)
 
 
 logout : Cmd msg
@@ -100,3 +124,13 @@ application viewerDecoder config =
 storageDecoder : Decode.Decoder (Cred -> viewer) -> Decode.Decoder viewer
 storageDecoder viewerDecoder =
     Decode.field "user" (decoderFromCred viewerDecoder)
+
+
+
+-- API
+
+
+mutation : SelectionSet a RootMutation -> Graphql.Http.Request a
+mutation mutationQuery =
+    mutationQuery
+        |> Graphql.Http.mutationRequest apiUrl

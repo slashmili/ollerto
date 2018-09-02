@@ -1,7 +1,15 @@
 module Page.Login exposing (Form, Model, Msg, Problem(..), init, toSession, update, view)
 
+import Api.Mutation as Mutation
+import Api.Object exposing (AuthenticateUserResult)
+import Api.Object.AuthenticateUserResult as AuthenticateUserResult
+import Api.Object.User
+import Api.Scalar
 import App exposing (Cred)
 import Browser.Navigation as Nav
+import Graphql.Http
+import Graphql.Operation exposing (RootMutation)
+import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
 import Html.Styled as HtmlStyled exposing (..)
 import Html.Styled.Attributes exposing (..)
 import Html.Styled.Events exposing (onInput, onSubmit)
@@ -97,7 +105,6 @@ viewForm problems form =
     let
         anyEmailProblem =
             anyKeyProblem Email problems
-                |> Debug.log "anyEmailProblem"
     in
     HtmlStyled.form [ onSubmit SubmittedForm ]
         [ label [ cssInputLabel ] [ text "Email" ]
@@ -130,6 +137,7 @@ type Msg
     = SubmittedForm
     | EnteredEmail String
     | EnteredPassword String
+    | GotAuthResponse (Result (Graphql.Http.Error Response) Response)
 
 
 type ValidatedField
@@ -143,7 +151,9 @@ update msg model =
         SubmittedForm ->
             case validate model.form of
                 Ok validateForm ->
-                    ( { model | problems = [] }, Cmd.none )
+                    ( { model | problems = [] }
+                    , Graphql.Http.send GotAuthResponse (login validateForm)
+                    )
 
                 Err problems ->
                     ( { model | problems = problems }, Cmd.none )
@@ -154,10 +164,54 @@ update msg model =
         EnteredPassword password ->
             updateForm (\form -> { form | password = password }) model
 
+        _ ->
+            let
+                _ =
+                    Debug.log "msg" msg
+            in
+            ( model, Cmd.none )
+
 
 updateForm : (Form -> Form) -> Model -> ( Model, Cmd Msg )
 updateForm transform model =
     ( { model | form = transform model.form }, Cmd.none )
+
+
+
+-- HTTP
+
+
+type alias Response =
+    { res : Maybe AuthenticateResult }
+
+
+type alias AuthenticateResult =
+    { token : String, user : UserResponse }
+
+
+type alias UserResponse =
+    { id : Api.Scalar.Id, email : String }
+
+
+login : TrimmedForm -> Graphql.Http.Request Response
+login (Trimmed form) =
+    let
+        input =
+            { input = { email = form.email, password = form.password } }
+
+        userSelection =
+            Api.Object.User.selection UserResponse
+                |> with Api.Object.User.id
+                |> with Api.Object.User.email
+
+        selectionSet =
+            AuthenticateUserResult.selection AuthenticateResult
+                |> with AuthenticateUserResult.token
+                |> with (AuthenticateUserResult.user userSelection)
+    in
+    Mutation.selection Response
+        |> with (Mutation.authenticateUser input selectionSet)
+        |> App.mutation
 
 
 
