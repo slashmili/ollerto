@@ -1,4 +1,4 @@
-module Viewer exposing (Viewer(..), create, decoder, store)
+module Viewer exposing (Viewer(..), create, cred, decoder, store)
 
 import App exposing (Cred)
 import Json.Decode as Decode exposing (Decoder)
@@ -11,8 +11,13 @@ type Viewer
 
 
 create : Cred -> Viewer
-create cred =
-    Viewer cred
+create credVal =
+    Viewer credVal
+
+
+cred : Viewer -> Cred
+cred (Viewer val) =
+    val
 
 
 decoder : Decoder (Cred -> Viewer)

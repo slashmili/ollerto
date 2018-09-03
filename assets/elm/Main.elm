@@ -100,8 +100,14 @@ changeRouteTo maybeRoute model =
                 Nothing ->
                     ( model, Route.replaceUrl (Session.navKey session) Route.Login )
 
-                _ ->
-                    ( NotFound session, Cmd.none )
+                Just viewer ->
+                    let
+                        username =
+                            viewer
+                                |> Viewer.cred
+                                |> App.username
+                    in
+                    ( model, Route.replaceUrl (Session.navKey session) (Route.Boards username) )
 
         Just Route.Login ->
             Login.init session
@@ -109,6 +115,9 @@ changeRouteTo maybeRoute model =
 
         Just Route.Logout ->
             ( model, App.logout )
+
+        Just (Route.Boards username) ->
+            ( NotFound session, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

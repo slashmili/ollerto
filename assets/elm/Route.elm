@@ -7,6 +7,7 @@ import Html.Styled
 import Html.Styled.Attributes as StyledAttr
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, oneOf, s, string)
+import Username exposing (Username)
 
 
 
@@ -18,6 +19,7 @@ type Route
     | Root
     | Login
     | Logout
+    | Boards Username
 
 
 parser : Parser (Route -> a) a
@@ -26,6 +28,7 @@ parser =
         [ Parser.map Home Parser.top
         , Parser.map Login (s "login")
         , Parser.map Logout (s "logout")
+        , Parser.map Boards (Username.urlParser </> s "boards")
         ]
 
 
@@ -69,5 +72,8 @@ routeToString page =
 
                 Logout ->
                     [ "logout" ]
+
+                Boards username ->
+                    [ "boards", Username.toString username ]
     in
     "/" ++ String.join "/" pieces
