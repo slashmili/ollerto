@@ -1,4 +1,4 @@
-port module App exposing (Cred, application, credHeader, decode, logout, mutation, onStoreChange, storageDecoder, storeCache, storeCred, username, viewerChanges)
+port module App exposing (Cred, application, createCred, credHeader, decode, logout, mutation, onStoreChange, storageDecoder, storeCache, storeCred, username, viewerChanges)
 
 import Browser
 import Browser.Navigation as Nav
@@ -15,6 +15,11 @@ import Username exposing (Username)
 
 type Cred
     = Cred Username String
+
+
+createCred : String -> Username -> Cred
+createCred token usernameVal =
+    Cred usernameVal token
 
 
 apiUrl =

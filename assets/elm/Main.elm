@@ -45,11 +45,7 @@ view model =
 
         body2 =
             HtmlStyled.toUnstyled
-                (div
-                    []
-                    [ a [ Route.href Route.Login ] [ text "login" ]
-                    ]
-                )
+                (text "Page not found")
     in
     case model of
         Login login ->
@@ -100,7 +96,12 @@ changeRouteTo maybeRoute model =
             ( model, Route.replaceUrl (Session.navKey session) Route.Login )
 
         Just Route.Home ->
-            ( model, Route.replaceUrl (Session.navKey session) Route.Login )
+            case Session.viewer session of
+                Nothing ->
+                    ( model, Route.replaceUrl (Session.navKey session) Route.Login )
+
+                _ ->
+                    ( NotFound session, Cmd.none )
 
         Just Route.Login ->
             Login.init session
@@ -158,8 +159,8 @@ subscriptions model =
         Redirect _ ->
             Session.changes GotSession (Session.navKey (toSession model))
 
-        _ ->
-            Sub.none
+        Login login ->
+            Sub.map GotLoginMsg (Login.subscriptions login)
 
 
 

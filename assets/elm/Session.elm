@@ -1,4 +1,4 @@
-module Session exposing (Session, changes, fromViewer, navKey)
+module Session exposing (Session, changes, fromViewer, navKey, viewer)
 
 import App exposing (Cred)
 import Browser.Navigation as Nav

@@ -1,7 +1,6 @@
-module Page.Login exposing (Form, Model, Msg, Problem(..), init, toSession, update, view)
+module Page.Login exposing (Form, Model, Msg, Problem(..), init, subscriptions, toSession, update, view)
 
 import Api.Mutation as Mutation
-import Api.Object exposing (AuthenticateUserResult)
 import Api.Object.AuthenticateUserResult as AuthenticateUserResult
 import Api.Object.User
 import Api.Scalar
@@ -17,6 +16,7 @@ import Route exposing (Route)
 import Session exposing (Session)
 import Style
 import Style.Login exposing (..)
+import Username
 import Viewer exposing (Viewer)
 
 
@@ -138,6 +138,7 @@ type Msg
     | EnteredEmail String
     | EnteredPassword String
     | GotAuthResponse (Result (Graphql.Http.Error Response) Response)
+    | GotSession Session
 
 
 type ValidatedField
@@ -164,12 +165,37 @@ update msg model =
         EnteredPassword password ->
             updateForm (\form -> { form | password = password }) model
 
-        _ ->
+        GotAuthResponse (Err (Graphql.Http.GraphqlError _ errors)) ->
             let
-                _ =
-                    Debug.log "msg" msg
+                problems =
+                    List.map (\e -> InvalidEntry Email e.message) errors
             in
-            ( model, Cmd.none )
+            ( { model | problems = problems }, Cmd.none )
+
+        GotAuthResponse (Err (Graphql.Http.HttpError _)) ->
+            ( { model | problems = [ ServerError "Can not reach remote server" ] }, Cmd.none )
+
+        GotAuthResponse (Ok { maybeResponse }) ->
+            case maybeResponse of
+                Nothing ->
+                    ( model, Cmd.none )
+
+                Just response ->
+                    let
+                        viewer =
+                            case response.user.id of
+                                Api.Scalar.Id userId ->
+                                    userId
+                                        |> Username.create
+                                        |> App.createCred response.token
+                                        |> Viewer.create
+                    in
+                    ( model, Viewer.store viewer )
+
+        GotSession session ->
+            ( { model | session = session }
+            , Route.replaceUrl (Session.navKey session) Route.Home
+            )
 
 
 updateForm : (Form -> Form) -> Model -> ( Model, Cmd Msg )
@@ -178,11 +204,20 @@ updateForm transform model =
 
 
 
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Session.changes GotSession (Session.navKey model.session)
+
+
+
 -- HTTP
 
 
 type alias Response =
-    { res : Maybe AuthenticateResult }
+    { maybeResponse : Maybe AuthenticateResult }
 
 
 type alias AuthenticateResult =
