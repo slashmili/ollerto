@@ -6,6 +6,7 @@ import Api.Object.User
 import Api.Scalar
 import App exposing (Cred)
 import Browser.Navigation as Nav
+import Graphql.Field
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet as SelectionSet exposing (SelectionSet, with)
@@ -175,22 +176,17 @@ update msg model =
         GotAuthResponse (Err (Graphql.Http.HttpError _)) ->
             ( { model | problems = [ ServerError "Can not reach remote server" ] }, Cmd.none )
 
-        GotAuthResponse (Ok { maybeResponse }) ->
-            case maybeResponse of
-                Nothing ->
-                    ( model, Cmd.none )
-
-                Just response ->
-                    let
-                        viewer =
-                            case response.user.id of
-                                Api.Scalar.Id userId ->
-                                    userId
-                                        |> Username.create
-                                        |> App.createCred response.token
-                                        |> Viewer.create
-                    in
-                    ( model, Viewer.store viewer )
+        GotAuthResponse (Ok { authenticateResult }) ->
+            let
+                viewer =
+                    case authenticateResult.user.id of
+                        Api.Scalar.Id userId ->
+                            userId
+                                |> Username.create
+                                |> App.createCred authenticateResult.token
+                                |> Viewer.create
+            in
+            ( model, Viewer.store viewer )
 
         GotSession session ->
             ( { model | session = session }
@@ -217,7 +213,7 @@ subscriptions model =
 
 
 type alias Response =
-    { maybeResponse : Maybe AuthenticateResult }
+    { authenticateResult : AuthenticateResult }
 
 
 type alias AuthenticateResult =
@@ -245,7 +241,7 @@ login (Trimmed form) =
                 |> with (AuthenticateUserResult.user userSelection)
     in
     Mutation.selection Response
-        |> with (Mutation.authenticateUser input selectionSet)
+        |> with (Mutation.authenticateUser input selectionSet |> Graphql.Field.nonNullOrFail)
         |> App.mutation
 
 
